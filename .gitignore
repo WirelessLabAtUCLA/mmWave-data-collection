@@ -1,0 +1,44 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+*.egg-info/
+dist/
+build/
+
+# ROS2
+install/
+build/
+log/
+*.bag
+*.db3
+
+# Data & Logs
+data/
+logs/
+*.log
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Config with secrets
+config/secrets.yaml
+*.pem
+*.key
+
+# Test
+.pytest_cache/
+.coverage
+htmlcov/
+

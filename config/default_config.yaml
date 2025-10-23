@@ -1,0 +1,55 @@
+# mmWave Data Collection Configuration
+
+# System
+system:
+  log_level: "INFO"  # DEBUG, INFO, WARN, ERROR
+  data_path: "./data"
+
+# Router (60GHz device)
+rx_router:
+  host: "192.168.1.1"
+  port: 22
+  username: "root"
+  key_file: "~/.ssh/id_rsa"  # Path to SSH private key
+  
+  command: "cat /proc/net/mmwave_stats"  # Command to run on router
+  remote_file: "/tmp/mmwave_data.csv"   # File to SCP from router
+  
+  collection_interval: 60.0  # seconds between collections
+  timeout: 30.0
+  channel: 1
+
+tx_router:
+  host: "192.168.100.1"
+  port: 22
+  username: "root"
+  key_file: "~/.ssh/id_rsa"
+  
+  command: "hostapd -B /etc/hostapd.conf"
+  timeout: 30.0
+  channel: 1
+
+# GPS
+gps:
+  enabled: true
+  auto_detect: true  # Auto-detect device path
+  device: "auto"     # or specify: /dev/ttyUSB0 (Linux), /dev/cu.usbserial-* (Mac)
+  baudrate: 9600
+
+# Camera
+camera:
+  enabled: true
+  device_id: 0  # Try 0, 1, 2 if not found
+  width: 1920
+  height: 1080
+  jpeg_quality: 85
+
+# Data Sync
+sync:
+  time_tolerance: 0.5  # seconds - how close timestamps must be
+  
+# Storage
+storage:
+  save_rosbag: true
+  organize_by_date: true
+
