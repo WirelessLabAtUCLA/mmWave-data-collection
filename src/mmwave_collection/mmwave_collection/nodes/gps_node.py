@@ -56,14 +56,18 @@ class GPSNode(Node):
             if line.startswith('$GPGGA') or line.startswith('$GNGGA'):
                 msg = pynmea2.parse(line)
                 
+                # Skip if no valid GPS data yet
+                if msg.latitude is None or msg.longitude is None:
+                    return
+                
                 # Create NavSatFix message
                 fix = NavSatFix()
                 fix.header.stamp = self.get_clock().now().to_msg()
                 fix.header.frame_id = 'gps'
                 
-                fix.latitude = msg.latitude
-                fix.longitude = msg.longitude
-                fix.altitude = msg.altitude
+                fix.latitude = float(msg.latitude)
+                fix.longitude = float(msg.longitude)
+                fix.altitude = float(msg.altitude) if msg.altitude is not None else 0.0
                 
                 fix.status.status = NavSatStatus.STATUS_FIX if msg.gps_qual > 0 else NavSatStatus.STATUS_NO_FIX
                 fix.status.service = NavSatStatus.SERVICE_GPS

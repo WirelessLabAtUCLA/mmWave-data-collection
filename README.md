@@ -1,131 +1,170 @@
 # mmWave Data Collection System
 
-Automated data collection from 60GHz router with synchronized GPS and camera data.
+Automated batch data collection from 60GHz router with synchronized GPS and camera data using ROS2.
 
 ## Features
 
-- **ROS2-based** sensor synchronization
-- **SSH/SCP** data collection from router
-- **GPS** location tracking  
-- **Webcam** image capture
-- **TUI** for monitoring
-- **Cross-platform** (Ubuntu & macOS)
+- **Batch CSI Collection**: Collects 5 CSI measurements per batch from router via SSH
+- **Time-Synchronized**: GPS and camera data matched with CSI batches
+- **Auto-Detection**: Automatically finds GPS devices on Ubuntu/macOS
+- **TUI Monitoring**: Terminal interface for real-time status
+- **Cross-Platform**: Works on Ubuntu and macOS
 
 ## Quick Start
 
-### 1. Install Dependencies
+### 1. Install ROS2
 
 **Ubuntu:**
 ```bash
-# Install ROS2 Humble
 sudo apt update
-sudo apt install ros-humble-desktop python3-colcon-common-extensions
-
-# Install system packages
-sudo apt install python3-pip gpsd v4l-utils
-
-# Install Python packages
-pip3 install -r requirements.txt
+sudo apt install ros-jazzy-desktop python3-colcon-common-extensions
 ```
 
 **macOS:**
 ```bash
-# Install ROS2 via Homebrew
-brew install ros-humble-desktop
-
-# Install Python packages
-pip3 install -r requirements.txt
+brew install ros-jazzy-desktop
 ```
 
-### 2. Configure
+### 2. Install Dependencies
 
-Edit `config/default_config.yaml`:
-- Set router IP, username, SSH key path
-- Adjust GPS device path (or use auto-detect)
-- Configure camera settings
+```bash
+# System packages (Ubuntu)
+sudo apt install python3-pip gpsd v4l-utils
 
-### 3. Build
+# Python packages (both platforms)
+pip3 install --user paramiko textual opencv-python pyyaml pyserial pynmea2
+```
+
+### 3. Configure
+
+Edit `config/default_config.yaml` with your router credentials:
+```yaml
+rx_router:
+  host: "192.168.1.101"      # Your router IP
+  username: "root"
+  key_file: "~/.ssh/id_ed25519"
+  mac_address: "\\xf4\\x1e\\x57\\x64\\x92\\xae"  # Target device MAC
+  measurements_per_batch: 5
+  batch_interval: 1.0
+```
+
+### 4. Build and Run
 
 ```bash
 # Source ROS2
-source /opt/ros/humble/setup.bash  # Ubuntu
-# source /opt/homebrew/opt/ros-humble/setup.bash  # macOS
+source /opt/ros/jazzy/setup.bash
 
 # Build
 colcon build --symlink-install
-
-# Source workspace
 source install/setup.bash
-```
 
-### 4. Run
-
-**Option A: With TUI (recommended)**
-```bash
-# Terminal 1: Launch ROS nodes
-ros2 launch mmwave_collection collection.launch.py
-
-# Terminal 2: Launch TUI
-python3 tui/app.py
-```
-
-**Option B: Nodes only**
-```bash
+# Run
 ros2 launch mmwave_collection collection.launch.py
 ```
+
+## How It Works
+
+1. **Router Node**: Every 1 second, collects 5 CSI measurements from router and publishes as a batch
+2. **GPS Node**: Continuously publishes location data
+3. **Camera Node**: Captures images every ~5 seconds
+4. **Sync Node**: Matches batches with closest GPS/camera data within 2 second window
 
 ## Data Output
 
-Data is saved to `./data/` organized by date:
+Data is saved to `data/YYYY-MM-DD/session_HHMMSS/`:
+
 ```
-data/
-└── 2025-10-22/
-    └── session_143052/
-        ├── metadata.json       # Session info & GPS track
-        ├── router_data/        # Router data files
-        │   └── *.txt
-        └── images/             # Camera images
-            └── *.jpg
+session_151552/
+├── metadata.json           # Session info with GPS coordinates
+├── rx_router_data/         # CSI measurement batches (JSON)
+│   └── batch*.json
+└── images/                 # Synchronized images
+    └── *.jpg
 ```
 
-## Configuration
-
-Key settings in `config/default_config.yaml`:
-
-- **Router**: SSH credentials, command to run, collection interval
-- **GPS**: Device path, baudrate, auto-detect
-- **Camera**: Device ID, resolution, JPEG quality
-- **Storage**: Data path, organization
+Each `metadata.json` entry contains:
+- Synchronized timestamp
+- GPS coordinates (lat, lon, alt)
+- Path to CSI batch file (5 measurements)
+- Path to image
 
 ## Troubleshooting
 
 **GPS not found:**
-- Ubuntu: Check `ls /dev/ttyUSB*`, add user to dialout group
-- macOS: Check `ls /dev/cu.*`, install USB drivers if needed
+```bash
+# Ubuntu: Check devices and add user to dialout group
+ls /dev/ttyUSB* /dev/ttyACM*
+sudo usermod -a -G dialout $USER
+# Log out and back in
+
+# macOS: Check USB devices
+ls /dev/cu.* /dev/tty.*
+```
 
 **Camera not working:**
-- Try different device_id values (0, 1, 2)
-- macOS: Grant camera permission in System Preferences
+```bash
+# Try different device IDs in config
+device_id: 0  # or 1, 2
+```
 
 **SSH connection fails:**
-- Verify router IP and SSH key path
-- Test manually: `ssh -i ~/.ssh/id_rsa admin@192.168.1.1`
+```bash
+# Test SSH connection manually
+ssh -i ~/.ssh/id_ed25519 root@192.168.1.101
 
-See `PLATFORM_COMPATIBILITY.md` for detailed platform-specific instructions.
+# If using password auth instead of key, update config:
+auth_method: "password"
+```
+
+**Python version mismatch (TUI):**
+```bash
+# TUI requires system Python matching ROS2
+conda deactivate  # Exit conda if using it
+python3 tui/app.py
+```
+
+## Optional: Terminal UI
+
+Monitor collection in real-time:
+
+```bash
+# Deactivate conda (if using)
+conda deactivate
+
+# Install textual with system Python
+pip3 install --user textual
+
+# Source ROS2 and workspace
+source /opt/ros/jazzy/setup.bash
+source install/setup.bash
+
+# Run TUI (in separate terminal from launch)
+python3 tui/app.py
+```
+
+The TUI shows:
+- ✅ Status of each node (router, GPS, camera)
+- 📍 Live GPS coordinates  
+- 📊 Sample count
+- 📝 Activity log
 
 ## Project Structure
 
 ```
 ├── config/                 # Configuration files
-├── src/mmwave_collection/ # ROS2 package
-│   ├── nodes/             # Router, GPS, Camera, Sync nodes
-│   ├── utils/             # Platform utilities, config loader
-│   └── launch/            # Launch files
-├── tui/                   # Terminal UI
-└── data/                  # Collected data (gitignored)
+├── src/mmwave_collection/  # ROS2 package
+│   ├── nodes/              # Router, GPS, Camera, Sync nodes
+│   ├── utils/              # Router script utilities
+│   └── launch/             # Launch file
+├── tui/                    # Terminal UI (optional)
+├── data/                   # Collected data (auto-created)
+└── scripts/                # Helper scripts
 ```
+
+## Platform Notes
+
+See `PLATFORM_COMPATIBILITY.md` for macOS-specific setup details.
 
 ## License
 
 MIT
-

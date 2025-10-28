@@ -19,35 +19,16 @@ def generate_launch_description():
             output='screen',
             parameters=[{
                 'router_name': 'rx_router',
-                'host': '192.168.1.1',
+                'host': '192.168.1.101',
                 'port': 22,
                 'username': 'root',
-                'key_file': '~/.ssh/id_rsa',
-                'command': 'cat /proc/net/mmwave_stats',
-                'remote_file': '/tmp/mmwave_data.csv',
-                'interval': 60.0,
-                'timeout': 30.0,
-                'enable_legacy_ssh': True,
-            }]
-        ),
-        
-        # TX Router node
-        Node(
-            package='mmwave_collection',
-            executable='router_node',
-            name='tx_router_node',
-            output='screen',
-            parameters=[{
-                'router_name': 'tx_router',
-                'host': '192.168.100.1',
-                'port': 22,
-                'username': 'root',
-                'key_file': '~/.ssh/id_rsa',
-                'command': 'hostapd -B /etc/hostapd.conf',
-                'remote_file': '',
-                'interval': 60.0,
-                'timeout': 30.0,
-                'enable_legacy_ssh': True,
+                'key_file': '~/.ssh/id_ed25519',
+                'mac_address': '\\xf4\\x1e\\x57\\x64\\x92\\xae',
+                'remote_file': '/tmp/csi_measurements.txt',
+                'remote_script': '/scripts/collect_csi.sh',
+                'measurements_per_batch': 5,
+                'batch_interval': 1.0,
+                'connection_timeout': 10,
             }]
         ),
         

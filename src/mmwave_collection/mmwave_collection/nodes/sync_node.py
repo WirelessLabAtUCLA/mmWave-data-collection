@@ -2,12 +2,15 @@
 """Sync node - Synchronize all data and save to disk"""
 import rclpy
 from rclpy.node import Node
+from rclpy.time import Time
 from std_msgs.msg import String
 from sensor_msgs.msg import NavSatFix, CompressedImage
 from message_filters import Subscriber, ApproximateTimeSynchronizer
 import json
 from pathlib import Path
 from datetime import datetime
+import time
+from collections import deque
 
 
 class SyncNode(Node):
@@ -16,13 +19,15 @@ class SyncNode(Node):
         
         # Declare parameters
         self.declare_parameter('data_path', './data')
-        self.declare_parameter('time_tolerance', 0.5)
+        self.declare_parameter('time_tolerance', 2.0)  # Increased tolerance for manual sync
         self.declare_parameter('organize_by_date', True)
+        self.declare_parameter('max_queue_size', 50)
         
         # Get parameters
         data_path = self.get_parameter('data_path').value
-        time_tolerance = self.get_parameter('time_tolerance').value
+        self.time_tolerance = self.get_parameter('time_tolerance').value
         organize_by_date = self.get_parameter('organize_by_date').value
+        max_queue_size = self.get_parameter('max_queue_size').value
         
         # Setup data directory
         self.data_root = Path(data_path)
@@ -39,18 +44,21 @@ class SyncNode(Node):
             'data_points': []
         }
         
-        # Subscribers with message_filters for synchronization
-        self.rx_router_sub = Subscriber(self, String, '/rx_router/data')
-        self.gps_sub = Subscriber(self, NavSatFix, '/gps/fix')
-        self.camera_sub = Subscriber(self, CompressedImage, '/camera/image/compressed')
+        # Message buffers for manual synchronization (String messages don't have headers)
+        self.router_buffer = deque(maxlen=max_queue_size)
+        self.gps_buffer = deque(maxlen=max_queue_size)
+        self.camera_buffer = deque(maxlen=max_queue_size)
         
-        # Synchronizer - synchronize all 4 data sources
-        self.sync = ApproximateTimeSynchronizer(
-            [self.rx_router_sub, self.gps_sub, self.camera_sub],
-            queue_size=10,
-            slop=time_tolerance
-        )
-        self.sync.registerCallback(self.sync_callback)
+        # Direct subscribers
+        self.rx_router_sub = self.create_subscription(
+            String, '/rx_router/data', self.router_callback, 10)
+        self.gps_sub = self.create_subscription(
+            NavSatFix, '/gps/fix', self.gps_callback, 10)
+        self.camera_sub = self.create_subscription(
+            CompressedImage, '/camera/image/compressed', self.camera_callback, 10)
+        
+        # Timer for periodic synchronization attempts
+        self.create_timer(0.1, self.try_sync)  # Try to sync every 100ms
         
         self.sample_count = 0
         self.get_logger().info(f'Sync node started, saving to {self.session_dir}')
@@ -69,17 +77,105 @@ class SyncNode(Node):
         session_dir.mkdir(parents=True, exist_ok=True)
         return session_dir
     
-    def sync_callback(self, rx_router_msg, tx_router_msg, gps_msg, camera_msg):
+    def router_callback(self, msg):
+        """Store router data with timestamp"""
+        ros_time = self.get_clock().now()
+        self.router_buffer.append((ros_time, msg))
+    
+    def gps_callback(self, msg):
+        """Store GPS data with timestamp"""
+        # GPS messages have headers with timestamps
+        ros_time = Time.from_msg(msg.header.stamp)
+        self.gps_buffer.append((ros_time, msg))
+    
+    def camera_callback(self, msg):
+        """Store camera data with timestamp"""
+        # Camera messages have headers with timestamps
+        ros_time = Time.from_msg(msg.header.stamp)
+        self.camera_buffer.append((ros_time, msg))
+    
+    def try_sync(self):
+        """Periodically try to synchronize messages from all three sources"""
+        # Need at least one message from each source
+        if not self.router_buffer or not self.gps_buffer or not self.camera_buffer:
+            return
+        
+        # Try to find a matching set within time tolerance
+        for i, (router_time, router_msg) in enumerate(self.router_buffer):
+            # Find closest GPS message
+            gps_match = None
+            gps_idx = None
+            min_gps_diff = float('inf')
+            
+            for j, (gps_time, gps_msg) in enumerate(self.gps_buffer):
+                time_diff = abs((router_time - gps_time).nanoseconds / 1e9)
+                if time_diff < min_gps_diff and time_diff < self.time_tolerance:
+                    min_gps_diff = time_diff
+                    gps_match = gps_msg
+                    gps_idx = j
+            
+            if gps_match is None:
+                continue
+            
+            # Find closest camera message
+            camera_match = None
+            camera_idx = None
+            min_camera_diff = float('inf')
+            
+            for k, (camera_time, camera_msg) in enumerate(self.camera_buffer):
+                time_diff = abs((router_time - camera_time).nanoseconds / 1e9)
+                if time_diff < min_camera_diff and time_diff < self.time_tolerance:
+                    min_camera_diff = time_diff
+                    camera_match = camera_msg
+                    camera_idx = k
+            
+            if camera_match is None:
+                continue
+            
+            # Found a match! Process it
+            self.process_synced_data(router_msg, gps_match, camera_match)
+            
+            # Remove processed messages from buffers
+            # Remove from oldest to newest to maintain indices
+            if camera_idx is not None:
+                del self.camera_buffer[camera_idx]
+            if gps_idx is not None:
+                del self.gps_buffer[gps_idx]
+            # Remove router message last (we're iterating over it)
+            del self.router_buffer[i]
+            
+            # Only process one match per timer callback
+            return
+    
+    def process_synced_data(self, rx_router_msg, gps_msg, camera_msg):
         """Handle synchronized messages from all sources"""
         self.sample_count += 1
         timestamp = datetime.now()
-        timestamp_str = timestamp.strftime('%H%M%S')
+        timestamp_str = timestamp.strftime('%Y%m%d_%H%M%S_%f')[:-3]  # Include milliseconds
         
         self.get_logger().info(f'Synchronized sample #{self.sample_count}')
         
-        # Save RX router data
-        rx_router_file = self.session_dir / 'rx_router_data' / f'{timestamp_str}_rx_router.txt'
-        rx_router_file.write_text(rx_router_msg.data)
+        # Parse router batch data (JSON format)
+        try:
+            batch_data = json.loads(rx_router_msg.data)
+            batch_id = batch_data.get('batch_id', 0)
+            measurements = batch_data.get('measurements', [])
+            measurement_count = batch_data.get('count', 0)
+        except json.JSONDecodeError:
+            self.get_logger().error('Failed to parse router data as JSON')
+            measurements = [rx_router_msg.data]
+            batch_id = 0
+            measurement_count = 1
+        
+        # Save RX router batch data
+        rx_router_file = self.session_dir / 'rx_router_data' / f'{timestamp_str}_batch{batch_id}.json'
+        with open(rx_router_file, 'w') as f:
+            json.dump({
+                'batch_id': batch_id,
+                'timestamp': timestamp.isoformat(),
+                'measurements': measurements,
+                'count': measurement_count
+            }, f, indent=2)
         
         # Save image
         image_file = self.session_dir / 'images' / f'{timestamp_str}.jpg'
@@ -94,22 +190,25 @@ class SyncNode(Node):
                 'longitude': gps_msg.longitude,
                 'altitude': gps_msg.altitude,
             },
-            'files': {
-                'rx_router_data': str(rx_router_file.relative_to(self.session_dir)),
-                'image': str(image_file.relative_to(self.session_dir))
-            }
+            'router_batch': {
+                'batch_id': batch_id,
+                'measurement_count': measurement_count,
+                'file': str(rx_router_file.relative_to(self.session_dir))
+            },
+            'image': str(image_file.relative_to(self.session_dir))
         }
         
         self.metadata['data_points'].append(data_point)
         
-        # Save metadata
+        # Save metadata incrementally
         metadata_file = self.session_dir / 'metadata.json'
         with open(metadata_file, 'w') as f:
             json.dump(self.metadata, f, indent=2)
         
         self.get_logger().info(
             f'Saved sample #{self.sample_count} - '
-            f'GPS: {gps_msg.latitude:.6f}, {gps_msg.longitude:.6f}'
+            f'GPS: {gps_msg.latitude:.6f}, {gps_msg.longitude:.6f} - '
+            f'Router batch: {measurement_count} measurements'
         )
     
     def destroy_node(self):
