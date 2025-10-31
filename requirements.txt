@@ -5,6 +5,8 @@ opencv-python>=4.8.0
 pyyaml>=6.0
 pyserial>=3.5
 pynmea2>=1.18.0
+numpy>=1.24.0
+scipy>=1.10.0
 
 # Optional - uncomment if using gpsd instead of serial
 # gpsd-py3>=0.3.0

@@ -1,0 +1,283 @@
+"""
+Visualization utilities for mmWave session data.
+
+Requires matplotlib. Install with: pip install matplotlib
+"""
+
+
+import matplotlib.pyplot as plt
+import numpy as np
+from pathlib import Path
+from matplotlib.animation import FuncAnimation, FFMpegWriter, PillowWriter
+from antenna_array import AntennaArray
+from utils import read_and_process_csi_data
+from session_data import SessionData
+from mikrotik_metadata import ordering_sets
+import shutil
+
+def plot_animation_of_beamformer(session: SessionData, save_path: Path = None):
+    """Plot animation of the beamformer.
+    
+    Args:
+        session: SessionData object
+        save_path: Optional path to save the animation video (e.g., 'animation.mp4')
+                  If None, the video will be saved to './videos/{session_id}/csi_polar_azimuth.mp4'
+    """
+    channel_data = read_and_process_csi_data(session)
+    num_samples = channel_data.shape[0]
+    valid_antennas = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 11, 13, 21, 23, 25, 27]
+
+    # Create antenna arrays for each sample
+    antenna_arrays = [AntennaArray() for _ in range(num_samples)]
+    for i in range(num_samples):
+        for antenna in range(32):
+            if antenna not in valid_antennas:
+                continue
+            antenna_arrays[i].add_element(ordering_sets[antenna, 0]*0.58 - np.sign(ordering_sets[antenna, 0])*0.29, 
+                0, ordering_sets[antenna, 1]*0.58 - np.sign(ordering_sets[antenna, 1])*0.29)
+        antenna_arrays[i].set_weights(np.conjugate(channel_data[i, :]))
+    
+    # Set default save path if not provided
+    if save_path is None:
+        save_path = Path(f'./videos/{session.session_id}/csi_polar_azimuth.mp4')
+    else:
+        save_path = Path(save_path)
+    
+    # Create directory if it doesn't exist
+    save_path.parent.mkdir(parents=True, exist_ok=True)
+    
+    # Create figure with polar axes
+    fig = plt.figure(figsize=(12, 8))
+    
+    # Animation update function
+    def update_frame(frame_idx):
+        """Update function for each frame of the animation."""
+        fig.clear()
+        ax = fig.add_subplot(111, projection='polar')
+        ax.set_thetamin(-90)
+        ax.set_thetamax(90)
+        
+        # Plot the polar array pattern for the current frame
+        antenna_arrays[frame_idx].show_polar_array_pattern_azimuth(ax, el=0, N=1024, full=True)
+        
+        # Add frame counter and session info
+        ax.set_title(f'Beamformer Pattern - Frame {frame_idx + 1}/{num_samples}\n'
+                    f'Session: {session.session_id}', pad=20)
+        
+        print(f'Processed frame {frame_idx + 1} of {num_samples}')
+        
+        return ax,
+    
+    # Create animation
+    print(f"Creating animation with {num_samples} frames...")
+    anim = FuncAnimation(fig, update_frame, frames=num_samples, 
+                        interval=200, blit=False, repeat=True)
+    
+    # Check if ffmpeg is available
+    ffmpeg_available = shutil.which('ffmpeg') is not None
+    
+    if ffmpeg_available:
+        # Use FFMpegWriter for high-quality MP4
+        writer = FFMpegWriter(fps=5, metadata=dict(artist='mmWave-data-collection'),
+                             bitrate=1800)
+        print(f"Saving animation to: {save_path}")
+    else:
+        # Fallback to PillowWriter for GIF (if ffmpeg not available)
+        print("FFmpeg not found. Falling back to GIF format...")
+        save_path = save_path.with_suffix('.gif')
+        writer = PillowWriter(fps=5, metadata=dict(artist='mmWave-data-collection'))
+        print(f"Saving animation to: {save_path}")
+        print("Tip: Install ffmpeg for MP4 output: conda install ffmpeg or sudo apt install ffmpeg")
+    
+    # Save animation
+    anim.save(str(save_path), writer=writer)
+    plt.close(fig)
+    
+    print(f"Animation saved successfully to: {save_path}")
+    
+
+def plot_gps_trajectory(session: SessionData, save_path: Path = None):
+    """Plot GPS trajectory on a 2D map.
+    
+    Args:
+        session: SessionData object
+        save_path: Optional path to save the figure
+    """
+    trajectory = session.get_gps_trajectory()
+    
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 6))
+    
+    # 2D trajectory
+    scatter = ax1.scatter(trajectory[:, 1], trajectory[:, 0], 
+                         c=range(len(trajectory)), cmap='viridis', 
+                         s=50, alpha=0.6)
+    ax1.plot(trajectory[:, 1], trajectory[:, 0], 'k-', alpha=0.3, linewidth=1)
+    ax1.set_xlabel('Longitude')
+    ax1.set_ylabel('Latitude')
+    ax1.set_title(f'GPS Trajectory - {session.session_id}')
+    ax1.grid(True, alpha=0.3)
+    plt.colorbar(scatter, ax=ax1, label='Data Point Index')
+    
+    # Mark start and end
+    ax1.plot(trajectory[0, 1], trajectory[0, 0], 'go', markersize=10, 
+             label='Start', zorder=5)
+    ax1.plot(trajectory[-1, 1], trajectory[-1, 0], 'ro', markersize=10, 
+             label='End', zorder=5)
+    ax1.legend()
+    
+    # Altitude profile
+    indices = np.arange(len(trajectory))
+    ax2.plot(indices, trajectory[:, 2], 'b-', linewidth=2)
+    ax2.fill_between(indices, trajectory[:, 2], alpha=0.3)
+    ax2.set_xlabel('Data Point Index')
+    ax2.set_ylabel('Altitude (m)')
+    ax2.set_title('Altitude Profile')
+    ax2.grid(True, alpha=0.3)
+    
+    plt.tight_layout()
+    
+    if save_path:
+        plt.savefig(save_path, dpi=150, bbox_inches='tight')
+        print(f"GPS trajectory plot saved to: {save_path}")
+    else:
+        plt.show()
+
+
+def plot_csi_phase_data(session: SessionData, save_path: Path = None):
+    """Plot CSI phase data.
+    
+    Args:
+        session: SessionData object
+        save_path: Optional path to save the figure
+    """
+    fig, axes = plt.subplots(4, 4, figsize=(16, 12))
+    axes = axes.flatten()
+    channel_data = read_and_process_csi_data(session)
+    phase_data = np.angle(channel_data, True)
+    # Set titles and labels for each subplot
+    for antenna in range(16):
+        axes[antenna].plot(phase_data[:, antenna], markersize=3, alpha=0.7)
+        axes[antenna].set_title(f"Antenna {antenna+1}")
+        axes[antenna].set_xlabel('Sample Index')
+        axes[antenna].set_ylabel('Phase (degrees)')
+        axes[antenna].grid(True, alpha=0.3)
+        axes[antenna].set_ylim(-180, 180)
+    
+    plt.suptitle(f'CSI Phase Data - {session.session_id}', fontsize=16)
+    plt.tight_layout()
+    
+    if save_path:
+        plt.savefig(save_path, dpi=150, bbox_inches='tight')
+        print(f"CSI phase plot saved to: {save_path}")
+    else:
+        plt.show()
+
+        
+
+
+def plot_temporal_analysis(session: SessionData, save_path: Path = None):
+    """Plot temporal analysis of the session.
+    
+    Args:
+        session: SessionData object
+        save_path: Optional path to save the figure
+    """
+    timestamps = session.get_timestamps()
+    
+    # Calculate time intervals
+    time_diffs = [(timestamps[i+1] - timestamps[i]).total_seconds() 
+                  for i in range(len(timestamps)-1)]
+    
+    # Calculate relative time from start
+    start_time = timestamps[0]
+    relative_times = [(t - start_time).total_seconds() for t in timestamps]
+    
+    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 8))
+    
+    # Sampling intervals
+    ax1.plot(range(len(time_diffs)), time_diffs, 'b.-', linewidth=1, markersize=3)
+    ax1.axhline(np.mean(time_diffs), color='r', linestyle='--', 
+                label=f'Mean: {np.mean(time_diffs):.3f}s')
+    ax1.set_xlabel('Sample Index')
+    ax1.set_ylabel('Time Interval (seconds)')
+    ax1.set_title('Sampling Intervals')
+    ax1.grid(True, alpha=0.3)
+    ax1.legend()
+    
+    # Cumulative samples over time
+    ax2.plot(relative_times, range(len(relative_times)), 'g-', linewidth=2)
+    ax2.set_xlabel('Time since start (seconds)')
+    ax2.set_ylabel('Cumulative Samples')
+    ax2.set_title('Data Collection Progress')
+    ax2.grid(True, alpha=0.3)
+    
+    # Add session info
+    info_text = (f"Session: {session.session_id}\n"
+                f"Duration: {session.get_duration():.1f}s\n"
+                f"Samples: {session.total_samples}\n"
+                f"Avg Rate: {session.total_samples/session.get_duration():.2f} Hz")
+    ax2.text(0.02, 0.98, info_text, transform=ax2.transAxes,
+            verticalalignment='top', bbox=dict(boxstyle='round', 
+            facecolor='wheat', alpha=0.5))
+    
+    plt.tight_layout()
+    
+    if save_path:
+        plt.savefig(save_path, dpi=150, bbox_inches='tight')
+        print(f"Temporal analysis plot saved to: {save_path}")
+    else:
+        plt.show()
+
+
+def create_all_plots(session: SessionData, output_dir: Path, include_animation: bool = False):
+    """Create all visualization plots for a session.
+    
+    Args:
+        session: SessionData object
+        output_dir: Directory to save plots
+        include_animation: Whether to create beamformer animation (default: False, as it can be time-consuming)
+    """
+    output_dir = Path(output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+    
+    print(f"Creating visualizations for {session.session_id}...")
+    print("-" * 60)
+    
+    # GPS trajectory
+    plot_gps_trajectory(session, output_dir / 'gps_trajectory.png')
+    
+    # CSI phase data
+    plot_csi_phase_data(session, output_dir / 'csi_phase_data.png')
+    
+    # Temporal analysis
+    plot_temporal_analysis(session, output_dir / 'temporal_analysis.png')
+    
+    # Beamformer animation (optional, can be time-consuming)
+    if include_animation:
+        print("\nCreating beamformer animation (this may take a while)...")
+        plot_animation_of_beamformer(session, output_dir / 'beamformer_animation.mp4')
+    
+    print("-" * 60)
+    print(f"All plots saved to: {output_dir}")
+
+
+if __name__ == "__main__":
+    # Example usage
+    session_dir = Path("../data/2025-10-30/session_141256")
+    session = SessionData.from_directory(session_dir)
+    
+    # Create all visualizations (without animation by default)
+    output_dir = Path("./visualizations")
+    # create_all_plots(session, output_dir)
+    
+    # Create all visualizations including beamformer animation
+    # create_all_plots(session, output_dir, include_animation=True)
+    
+    # Or create individual plots
+    plot_gps_trajectory(session)
+    plot_temporal_analysis(session)
+    plot_csi_phase_data(session)
+    
+    # Create beamformer animation
+    # plot_animation_of_beamformer(session)
+
