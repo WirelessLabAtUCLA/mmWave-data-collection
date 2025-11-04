@@ -5,9 +5,10 @@ Automated batch data collection from 60GHz router with synchronized GPS and came
 ## Features
 
 - **Batch CSI Collection**: Collects 5 CSI measurements per batch from router via SSH
+- **Discrete & Continuous Modes**: Manual trigger-based or automatic continuous collection
 - **Time-Synchronized**: GPS and camera data matched with CSI batches
 - **Auto-Detection**: Automatically finds GPS devices on Ubuntu/macOS
-- **TUI Monitoring**: Terminal interface for real-time status
+- **TUI Monitoring**: Terminal interface for real-time status with collection trigger
 - **Cross-Platform**: Works on Ubuntu and macOS
 
 ## Quick Start
@@ -58,9 +59,14 @@ source /opt/ros/jazzy/setup.bash
 colcon build --symlink-install
 source install/setup.bash
 
-# Run
+# Run (Continuous Mode - automatic collection)
 ros2 launch mmwave_collection collection.launch.py
+
+# OR Run (Discrete Mode - manual trigger collection)
+ros2 launch mmwave_collection collection.launch.py discrete_mode:=true
 ```
+
+**See [DISCRETE_MODE.md](DISCRETE_MODE.md) for detailed guide on discrete collection mode.**
 
 ## How It Works
 
@@ -123,9 +129,9 @@ conda deactivate  # Exit conda if using it
 python3 tui/app.py
 ```
 
-## Optional: Terminal UI
+## Terminal UI
 
-Monitor collection in real-time:
+Monitor and control collection in real-time:
 
 ```bash
 # Deactivate conda (if using)
@@ -147,6 +153,11 @@ The TUI shows:
 - 📍 Live GPS coordinates  
 - 📊 Sample count
 - 📝 Activity log
+
+**Key Bindings:**
+- **SPACE** - Trigger data collection (discrete mode)
+- **C** - Clear log
+- **Q** - Quit
 
 ## Project Structure
 

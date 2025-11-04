@@ -10,7 +10,18 @@ def generate_launch_description():
     # Get config file path
     config_file = LaunchConfiguration('config', default='config/default_config.yaml')
     
+    # Declare launch argument for discrete mode
+    discrete_mode_arg = DeclareLaunchArgument(
+        'discrete_mode',
+        default_value='false',
+        description='Enable discrete data collection mode (trigger-based)'
+    )
+    
+    discrete_mode = LaunchConfiguration('discrete_mode')
+    
     return LaunchDescription([
+        discrete_mode_arg,
+        
         # RX Router node
         Node(
             package='mmwave_collection',
@@ -29,6 +40,7 @@ def generate_launch_description():
                 'measurements_per_batch': 5,
                 'batch_interval': 1.0,
                 'connection_timeout': 10,
+                'discrete_mode': discrete_mode,
             }]
         ),
         
@@ -42,6 +54,7 @@ def generate_launch_description():
                 'device': 'auto',
                 'baudrate': 9600,
                 'auto_detect': True,
+                'discrete_mode': discrete_mode,
             }]
         ),
         
@@ -56,6 +69,7 @@ def generate_launch_description():
                 'width': 1920,
                 'height': 1080,
                 'jpeg_quality': 85,
+                'discrete_mode': discrete_mode,
             }]
         ),
         

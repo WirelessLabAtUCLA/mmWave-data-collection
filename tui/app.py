@@ -7,7 +7,7 @@ from textual import work
 from textual.reactive import reactive
 import rclpy
 from rclpy.node import Node
-from std_msgs.msg import String
+from std_msgs.msg import String, Empty
 from sensor_msgs.msg import NavSatFix, CompressedImage
 from threading import Thread
 import time
@@ -53,14 +53,23 @@ class ROSBridge(Node):
         self.app = app
         
         # Subscribers
-        self.create_subscription(String, '/router/data', self.router_callback, 10)
+        self.create_subscription(String, '/rx_router/data', self.router_callback, 10)
         self.create_subscription(NavSatFix, '/gps/fix', self.gps_callback, 10)
         self.create_subscription(CompressedImage, '/camera/image/compressed', self.camera_callback, 10)
+        
+        # Publisher for triggering collection
+        self.trigger_pub = self.create_publisher(Empty, '/trigger_collection', 10)
         
         self.last_router = 0
         self.last_gps = 0
         self.last_camera = 0
         self.sample_count = 0
+    
+    def trigger_collection(self):
+        """Trigger a discrete data collection"""
+        msg = Empty()
+        self.trigger_pub.publish(msg)
+        self.get_logger().info('Collection triggered')
     
     def router_callback(self, msg):
         self.last_router = time.time()
@@ -111,6 +120,7 @@ class CollectionTUI(App):
     
     BINDINGS = [
         ("q", "quit", "Quit"),
+        ("space", "collect", "Collect Sample"),
         ("c", "clear_log", "Clear Log"),
     ]
     
@@ -185,6 +195,12 @@ class CollectionTUI(App):
         """Clear the log"""
         log = self.query_one("#log", Log)
         log.clear()
+    
+    def action_collect(self):
+        """Trigger a discrete data collection"""
+        if self.ros_node:
+            self.ros_node.trigger_collection()
+            self.log_message("[bold green]Collecting sample...[/bold green]")
     
     def on_unmount(self):
         """Cleanup ROS"""

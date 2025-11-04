@@ -3,7 +3,7 @@
 from mmwave_collection.utils.router_utils import prepare_collection_script
 import rclpy
 from rclpy.node import Node
-from std_msgs.msg import String, Header
+from std_msgs.msg import String, Empty
 import paramiko
 from pathlib import Path
 import time
@@ -29,6 +29,7 @@ class RouterNode(Node):
         self.declare_parameter('measurements_per_batch', 5)
         self.declare_parameter('batch_interval', 1.0)  # Seconds between batch collections
         self.declare_parameter('connection_timeout', 10)
+        self.declare_parameter('discrete_mode', False)  # New: discrete vs continuous
         
         # Get parameters
         self.router_name = self.get_parameter('router_name').value
@@ -43,10 +44,15 @@ class RouterNode(Node):
         self.measurements_per_batch = self.get_parameter('measurements_per_batch').value
         self.batch_interval = self.get_parameter('batch_interval').value
         self.connection_timeout = self.get_parameter('connection_timeout').value
+        self.discrete_mode = self.get_parameter('discrete_mode').value
         
         # Publisher
         topic_name = f'/{self.router_name}/data'
         self.publisher = self.create_publisher(String, topic_name, 10)
+        
+        # Trigger subscriber for discrete mode
+        self.trigger_sub = self.create_subscription(
+            Empty, '/trigger_collection', self.trigger_callback, 10)
         
         # SSH client
         self.ssh_client = None
@@ -55,16 +61,30 @@ class RouterNode(Node):
         # Connect and upload script
         if self.connect_ssh():
             if self.upload_collection_script():
-                # Start batch collection timer
-                self.timer = self.create_timer(self.batch_interval, self.collect_batch)
-                self.get_logger().info(
-                    f'{self.router_name} started: {self.measurements_per_batch} measurements '
-                    f'every {self.batch_interval}s'
-                )
+                mode_str = "discrete" if self.discrete_mode else "continuous"
+                
+                # Start batch collection timer only in continuous mode
+                if not self.discrete_mode:
+                    self.timer = self.create_timer(self.batch_interval, self.collect_batch)
+                    self.get_logger().info(
+                        f'{self.router_name} started in {mode_str} mode: {self.measurements_per_batch} measurements '
+                        f'every {self.batch_interval}s'
+                    )
+                else:
+                    self.get_logger().info(
+                        f'{self.router_name} started in {mode_str} mode: {self.measurements_per_batch} measurements '
+                        f'per trigger'
+                    )
             else:
                 self.get_logger().error('Failed to upload collection script')
         else:
             self.get_logger().error('Failed to connect to router')
+    
+    def trigger_callback(self, msg):
+        """Handle collection trigger in discrete mode"""
+        if self.discrete_mode:
+            self.get_logger().info('Triggered router collection')
+            self.collect_batch()
     
     def connect_ssh(self):
         """Connect to router via SSH"""

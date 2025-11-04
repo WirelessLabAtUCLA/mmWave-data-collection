@@ -3,6 +3,7 @@
 import rclpy
 from rclpy.node import Node
 from sensor_msgs.msg import NavSatFix, NavSatStatus
+from std_msgs.msg import Empty
 import serial
 import pynmea2
 
@@ -15,11 +16,13 @@ class GPSNode(Node):
         self.declare_parameter('device', '/dev/ttyUSB0')
         self.declare_parameter('baudrate', 9600)
         self.declare_parameter('auto_detect', True)
+        self.declare_parameter('discrete_mode', False)  # New: discrete vs continuous
         
         # Get parameters
         device = self.get_parameter('device').value
         baudrate = self.get_parameter('baudrate').value
         auto_detect = self.get_parameter('auto_detect').value
+        self.discrete_mode = self.get_parameter('discrete_mode').value
         
         # Auto-detect device if needed
         if auto_detect and device == 'auto':
@@ -33,20 +36,36 @@ class GPSNode(Node):
         # Publisher
         self.publisher = self.create_publisher(NavSatFix, '/gps/fix', 10)
         
+        # Trigger subscriber for discrete mode
+        self.trigger_sub = self.create_subscription(
+            Empty, '/trigger_collection', self.trigger_callback, 10)
+        
         # Open serial port
         try:
             self.serial = serial.Serial(device, baudrate, timeout=1)
-            self.get_logger().info(f'GPS node started on {device}')
+            mode_str = "discrete" if self.discrete_mode else "continuous"
+            self.get_logger().info(f'GPS node started in {mode_str} mode on {device}')
         except Exception as e:
             self.get_logger().error(f'Failed to open GPS device: {e}')
             self.serial = None
             return
         
-        # Timer to read GPS
+        # Store latest GPS data for discrete mode
+        self.latest_gps = None
+        
+        # Timer to continuously read GPS (needed to keep data fresh)
+        # In discrete mode, we read continuously but only publish on trigger
         self.timer = self.create_timer(0.1, self.read_gps)  # 10Hz
     
+    def trigger_callback(self, msg):
+        """Handle collection trigger in discrete mode"""
+        if self.discrete_mode and self.latest_gps is not None:
+            # Publish the latest GPS reading
+            self.publisher.publish(self.latest_gps)
+            self.get_logger().info('Published GPS sample on trigger')
+    
     def read_gps(self):
-        """Read and publish GPS data"""
+        """Read and optionally publish GPS data"""
         if self.serial is None or not self.serial.is_open:
             return
         
@@ -72,13 +91,18 @@ class GPSNode(Node):
                 fix.status.status = NavSatStatus.STATUS_FIX if msg.gps_qual > 0 else NavSatStatus.STATUS_NO_FIX
                 fix.status.service = NavSatStatus.SERVICE_GPS
                 
-                self.publisher.publish(fix)
+                # Store latest for discrete mode
+                self.latest_gps = fix
                 
-                if msg.gps_qual > 0:
-                    self.get_logger().info(
-                        f'GPS: {msg.latitude:.6f}, {msg.longitude:.6f}, alt={msg.altitude:.1f}m',
-                        throttle_duration_sec=5.0  # Log every 5 seconds max
-                    )
+                # Only publish automatically in continuous mode
+                if not self.discrete_mode:
+                    self.publisher.publish(fix)
+                    
+                    if msg.gps_qual > 0:
+                        self.get_logger().info(
+                            f'GPS: {msg.latitude:.6f}, {msg.longitude:.6f}, alt={msg.altitude:.1f}m',
+                            throttle_duration_sec=5.0  # Log every 5 seconds max
+                        )
                 
         except (pynmea2.ParseError, UnicodeDecodeError):
             pass  # Ignore invalid sentences
