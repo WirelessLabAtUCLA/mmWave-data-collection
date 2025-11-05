@@ -9,6 +9,7 @@ from typing import List, Optional, Dict, Any
 import json
 import numpy as np
 import re
+import os
 
 
 @dataclass
@@ -421,6 +422,210 @@ class SessionData:
     
     def __repr__(self) -> str:
         return f"SessionData(session_id='{self.session_id}', samples={self.total_samples})"
+
+
+def detect_bad_batches(session_dir: Path, verbose: bool = True) -> List[int]:
+    """Detect batches with insufficient or invalid data.
+    
+    Args:
+        session_dir: Path to session directory
+        verbose: Whether to print detailed information about bad batches
+    
+    Returns:
+        List of indices of bad batches
+    """
+    session_dir = Path(session_dir)
+    metadata_file = session_dir / 'metadata.json'
+    
+    if not metadata_file.exists():
+        raise FileNotFoundError(f"Metadata file not found: {metadata_file}")
+    
+    with open(metadata_file, 'r') as f:
+        metadata = json.load(f)
+    
+    bad_indices = []
+    
+    if verbose:
+        print(f"Scanning session: {metadata['session_id']}")
+        print(f"Total data points: {len(metadata['data_points'])}")
+        print("-" * 60)
+    
+    for i, data_point in enumerate(metadata['data_points']):
+        if 'router_batch' not in data_point or 'file' not in data_point['router_batch']:
+            if verbose:
+                print(f"Batch {i}: Missing router_batch info")
+            bad_indices.append(i)
+            continue
+
+        router_file = session_dir / data_point['router_batch']['file']
+        if not router_file.exists():
+            if verbose:
+                print(f"Batch {i}: Router file not found: {router_file.name}")
+            bad_indices.append(i)
+            continue
+        
+        try:
+            with open(router_file, 'r') as f:
+                batch_data = json.load(f)
+            
+            if 'measurements' not in batch_data or not batch_data['measurements']:
+                if verbose:
+                    print(f"Batch {i}: No measurements found")
+                bad_indices.append(i)
+                continue
+
+            valid_measurements = 0
+            for measurement_str in batch_data['measurements']:
+                try:
+                    RouterMeasurement.from_string(measurement_str)
+                    valid_measurements += 1
+                except (ValueError, IndexError):
+                    pass
+            
+            if valid_measurements == 0 or valid_measurements < len(batch_data['measurements']):
+                if verbose:
+                    print(f"Batch {i}: All measurements failed to parse (0/{len(batch_data['measurements'])} valid)")
+                bad_indices.append(i)
+                
+        except Exception as e:
+            if verbose:
+                print(f"Batch {i}: Error loading batch: {e}")
+            bad_indices.append(i)
+    
+    if verbose:
+        print("-" * 60)
+        print(f"Found {len(bad_indices)} bad batches: {bad_indices}")
+    
+    return bad_indices
+
+
+def clean_session_data(session_dir: Path, batch_indices_to_remove: List[int], 
+                       backup: bool = True) -> SessionData:
+    """Clean session data by removing bad batches and their associated files.
+    
+    This function will:
+    1. Load the metadata.json file
+    2. Remove data points at the specified indices
+    3. Delete associated image files
+    4. Delete associated router batch files
+    5. Renumber remaining data points
+    6. Update metadata and save it
+    7. Return a new SessionData object with cleaned data
+    
+    Args:
+        session_dir: Path to session directory
+        batch_indices_to_remove: List of batch indices to remove (0-based)
+        backup: Whether to create a backup of metadata.json before modifying (default: True)
+    
+    Returns:
+        SessionData object with cleaned data
+    """
+    session_dir = Path(session_dir)
+    metadata_file = session_dir / 'metadata.json'
+    
+    if not metadata_file.exists():
+        raise FileNotFoundError(f"Metadata file not found: {metadata_file}")
+    
+    # Load metadata
+    with open(metadata_file, 'r') as f:
+        metadata = json.load(f)
+    
+    # Create backup if requested
+    if backup:
+        backup_file = session_dir / f'metadata_backup_{datetime.now().strftime("%Y%m%d_%H%M%S")}.json'
+        with open(backup_file, 'w') as f:
+            json.dump(metadata, f, indent=2)
+        print(f"Created backup: {backup_file}")
+    
+    # Sort indices in descending order to avoid index shifting issues during removal
+    indices_to_remove = sorted(set(batch_indices_to_remove), reverse=True)
+    
+    print(f"\nCleaning session: {metadata['session_id']}")
+    print(f"Removing {len(indices_to_remove)} bad batches: {sorted(indices_to_remove)}")
+    print("-" * 60)
+    
+    # Remove data points and associated files
+    removed_count = 0
+    for idx in indices_to_remove:
+        if idx < 0 or idx >= len(metadata['data_points']):
+            print(f"Warning: Index {idx} out of range, skipping")
+            continue
+        
+        data_point = metadata['data_points'][idx]
+        
+        # Delete image file if it exists
+        if 'image' in data_point:
+            image_path = session_dir / data_point['image']
+            if image_path.exists():
+                os.remove(image_path)
+                print(f"Deleted image: {image_path.name}")
+            else:
+                print(f"Image not found (already deleted?): {image_path.name}")
+        
+        # Delete router batch file if it exists
+        if 'router_batch' in data_point and 'file' in data_point['router_batch']:
+            router_file = session_dir / data_point['router_batch']['file']
+            if router_file.exists():
+                os.remove(router_file)
+                print(f"Deleted router batch: {router_file.name}")
+            else:
+                print(f"Router batch not found (already deleted?): {router_file.name}")
+        
+        # Remove from metadata
+        del metadata['data_points'][idx]
+        removed_count += 1
+    
+    # Renumber remaining data points
+    for i, data_point in enumerate(metadata['data_points']):
+        data_point['index'] = i
+    
+    # Update metadata counts
+    metadata['total_samples'] = len(metadata['data_points'])
+    
+    # Update end time if we removed the last data point
+    if metadata['data_points']:
+        metadata['end_time'] = metadata['data_points'][-1]['timestamp']
+    
+    # Save updated metadata
+    with open(metadata_file, 'w') as f:
+        json.dump(metadata, f, indent=2)
+    
+    print("-" * 60)
+    print(f"Removed {removed_count} data points")
+    print(f"Remaining data points: {metadata['total_samples']}")
+    print(f"Updated metadata saved to: {metadata_file}")
+    
+    # Load and return the cleaned session
+    return SessionData.from_directory(session_dir)
+
+
+def auto_clean_session(session_dir: Path, backup: bool = True) -> SessionData:
+    """Automatically detect and clean bad batches from a session.
+    
+    This is a convenience function that combines detect_bad_batches() and clean_session_data().
+    
+    Args:
+        session_dir: Path to session directory
+        backup: Whether to create a backup of metadata.json before modifying (default: True)
+    
+    Returns:
+        SessionData object with cleaned data
+    """
+    # Detect bad batches
+    print("\n" + "=" * 60)
+    print("STEP 1: DETECTING BAD BATCHES")
+    print("=" * 60)
+    bad_indices = detect_bad_batches(session_dir, verbose=True)
+    
+    if not bad_indices:
+        print("\nNo bad batches found! Session is clean.")
+        return SessionData.from_directory(session_dir)
+    
+    # Clean the session
+    print("\n" + "=" * 60)
+    print("STEP 2: CLEANING SESSION")
+    print("=" * 60)
+    return clean_session_data(session_dir, bad_indices, backup=backup)
 
 
 def load_all_sessions(data_dir: Path) -> Dict[str, SessionData]:

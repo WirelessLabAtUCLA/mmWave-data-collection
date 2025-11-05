@@ -22,12 +22,16 @@ class SyncNode(Node):
         self.declare_parameter('time_tolerance', 2.0)  # Increased tolerance for manual sync
         self.declare_parameter('organize_by_date', True)
         self.declare_parameter('max_queue_size', 50)
+        self.declare_parameter('discrete_mode', False)
+        self.declare_parameter('gps_required', False)  # Make GPS optional
         
         # Get parameters
         data_path = self.get_parameter('data_path').value
         self.time_tolerance = self.get_parameter('time_tolerance').value
         organize_by_date = self.get_parameter('organize_by_date').value
         max_queue_size = self.get_parameter('max_queue_size').value
+        self.discrete_mode = self.get_parameter('discrete_mode').value
+        self.gps_required = self.get_parameter('gps_required').value
         
         # Setup data directory
         self.data_root = Path(data_path)
@@ -58,10 +62,18 @@ class SyncNode(Node):
             CompressedImage, '/camera/image/compressed', self.camera_callback, 10)
         
         # Timer for periodic synchronization attempts
-        self.create_timer(0.1, self.try_sync)  # Try to sync every 100ms
+        if self.discrete_mode:
+            self.create_timer(0.1, self.try_sync_discrete)  # Try to sync every 100ms
+        else:
+            self.create_timer(0.1, self.try_sync)  # Try to sync every 100ms
         
         self.sample_count = 0
-        self.get_logger().info(f'Sync node started, saving to {self.session_dir}')
+        self.pending_sync = False  # Track if new data arrived
+        self.last_gps = None  # Store last GPS for optional mode
+        
+        mode_str = "discrete" if self.discrete_mode else "continuous"
+        gps_str = "required" if self.gps_required else "optional"
+        self.get_logger().info(f'Sync node started in {mode_str} mode (GPS {gps_str}), saving to {self.session_dir}')
     
     def _create_session_dir(self, organize_by_date: bool) -> Path:
         """Create session directory"""
@@ -81,19 +93,65 @@ class SyncNode(Node):
         """Store router data with timestamp"""
         ros_time = self.get_clock().now()
         self.router_buffer.append((ros_time, msg))
-    
+
     def gps_callback(self, msg):
         """Store GPS data with timestamp"""
         # GPS messages have headers with timestamps
         ros_time = Time.from_msg(msg.header.stamp)
         self.gps_buffer.append((ros_time, msg))
+        self.last_gps = msg  # Store for optional GPS mode
     
     def camera_callback(self, msg):
         """Store camera data with timestamp"""
         # Camera messages have headers with timestamps
         ros_time = Time.from_msg(msg.header.stamp)
         self.camera_buffer.append((ros_time, msg))
-    
+
+    def try_sync_discrete(self):
+        """Synchronize messages in discrete mode"""
+        if not self.router_buffer or not self.gps_buffer or not self.camera_buffer:
+            return
+        
+        for i, (router_time, router_msg) in enumerate(self.router_buffer):
+            # Find closest GPS message
+            gps_match = None
+            gps_idx = None
+            min_gps_diff = float('inf')
+            
+            for j, (gps_time, gps_msg) in enumerate(self.gps_buffer):
+                time_diff = abs((router_time - gps_time).nanoseconds / 1e9)
+                if time_diff < min_gps_diff:
+                    min_gps_diff = time_diff
+                    gps_match = gps_msg
+                    gps_idx = j
+            
+            # Find closest camera message
+            camera_match = None
+            camera_idx = None
+            min_camera_diff = float('inf')
+            
+            for k, (camera_time, camera_msg) in enumerate(self.camera_buffer):
+                time_diff = abs((router_time - camera_time).nanoseconds / 1e9)
+                if time_diff < min_camera_diff:
+                    min_camera_diff = time_diff
+                    camera_match = camera_msg
+                    camera_idx = k
+            
+            # Found a match! Process it
+            self.process_synced_data(router_msg, gps_match, camera_match)
+            
+            # Remove processed messages from buffers
+            # Remove from oldest to newest to maintain indices
+            if camera_idx is not None:
+                del self.camera_buffer[camera_idx]
+            if gps_idx is not None:
+                del self.gps_buffer[gps_idx]
+            # Remove router message last (we're iterating over it)
+            del self.router_buffer[i]
+            
+            # Only process one match per timer callback
+            return
+
     def try_sync(self):
         """Periodically try to synchronize messages from all three sources"""
         # Need at least one message from each source
@@ -186,9 +244,9 @@ class SyncNode(Node):
             'index': self.sample_count,
             'timestamp': timestamp.isoformat(),
             'gps': {
-                'latitude': gps_msg.latitude,
-                'longitude': gps_msg.longitude,
-                'altitude': gps_msg.altitude,
+                'latitude': gps_msg.latitude if gps_msg else 0.0,
+                'longitude': gps_msg.longitude if gps_msg else 0.0,
+                'altitude': gps_msg.altitude if gps_msg else 0.0,
             },
             'router_batch': {
                 'batch_id': batch_id,
@@ -205,11 +263,18 @@ class SyncNode(Node):
         with open(metadata_file, 'w') as f:
             json.dump(self.metadata, f, indent=2)
         
-        self.get_logger().info(
-            f'Saved sample #{self.sample_count} - '
-            f'GPS: {gps_msg.latitude:.6f}, {gps_msg.longitude:.6f} - '
-            f'Router batch: {measurement_count} measurements'
-        )
+        if gps_msg:
+            self.get_logger().info(
+                f'Saved sample #{self.sample_count} - '
+                f'GPS: {gps_msg.latitude:.6f}, {gps_msg.longitude:.6f} - '
+                f'Router batch: {measurement_count} measurements'
+            )
+        else:
+            self.get_logger().info(
+                f'Saved sample #{self.sample_count} - '
+                f'GPS: N/A - '
+                f'Router batch: {measurement_count} measurements'
+            )
     
     def destroy_node(self):
         """Cleanup - finalize metadata"""

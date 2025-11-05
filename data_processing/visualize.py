@@ -14,16 +14,18 @@ from utils import read_and_process_csi_data
 from session_data import SessionData
 from mikrotik_metadata import ordering_sets
 import shutil
+from PIL import Image
 
-def plot_animation_of_beamformer(session: SessionData, save_path: Path = None):
+def plot_animation_of_beamformer(session: SessionData, save_path: Path = None, plot_image: bool = False):
     """Plot animation of the beamformer.
     
     Args:
         session: SessionData object
         save_path: Optional path to save the animation video (e.g., 'animation.mp4')
                   If None, the video will be saved to './videos/{session_id}/csi_polar_azimuth.mp4'
+        plot_image: Whether to plot the camera image side by side with the beamformer pattern
     """
-    channel_data = read_and_process_csi_data(session)
+    channel_data, global_indices = read_and_process_csi_data(session)
     num_samples = channel_data.shape[0]
     valid_antennas = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 11, 13, 21, 23, 25, 27]
 
@@ -46,27 +48,55 @@ def plot_animation_of_beamformer(session: SessionData, save_path: Path = None):
     # Create directory if it doesn't exist
     save_path.parent.mkdir(parents=True, exist_ok=True)
     
-    # Create figure with polar axes
-    fig = plt.figure(figsize=(12, 8))
+    # Get image paths if plot_image is True
+    image_paths = None
+    measurements_per_image = int(session.metadata['data_points'][0]['router_batch']['measurement_count'])
+    if plot_image:
+        image_paths = session.get_image_paths()
+        image_paths = np.repeat(image_paths, measurements_per_image)[global_indices]
+    
+    # Create figure with appropriate layout
+    if plot_image:
+        fig = plt.figure(figsize=(20, 8))
+    else:
+        fig = plt.figure(figsize=(12, 8))
     
     # Animation update function
     def update_frame(frame_idx):
         """Update function for each frame of the animation."""
         fig.clear()
-        ax = fig.add_subplot(111, projection='polar')
-        ax.set_thetamin(-90)
-        ax.set_thetamax(90)
+        
+        if plot_image:
+            # Create subplots: image on left, beamformer on right
+            ax_img = fig.add_subplot(121)
+            ax_polar = fig.add_subplot(122, projection='polar')
+            
+            img = Image.open(image_paths[frame_idx])
+            ax_img.imshow(img)
+            ax_img.set_title(f'Webcam Image {frame_idx + 1}/{len(image_paths)}\n'
+                           f'(Measurement {frame_idx + 1}/{num_samples})')
+            ax_img.axis('off')
+        else:
+            # Only beamformer plot
+            ax_polar = fig.add_subplot(111, projection='polar')
+        
+        # Configure polar plot
+        ax_polar.set_thetamin(-90)
+        ax_polar.set_thetamax(90)
         
         # Plot the polar array pattern for the current frame
-        antenna_arrays[frame_idx].show_polar_array_pattern_azimuth(ax, el=0, N=1024, full=True)
+        antenna_arrays[frame_idx].show_polar_array_pattern_azimuth(ax_polar, el=0, N=1024, full=True)
         
         # Add frame counter and session info
-        ax.set_title(f'Beamformer Pattern - Frame {frame_idx + 1}/{num_samples}\n'
-                    f'Session: {session.session_id}', pad=20)
+        ax_polar.set_title(f'Beamformer Pattern - Frame {frame_idx + 1}/{num_samples}\n'
+                          f'Session: {session.session_id}', pad=20)
         
         print(f'Processed frame {frame_idx + 1} of {num_samples}')
         
-        return ax,
+        if plot_image:
+            return ax_img, ax_polar
+        else:
+            return ax_polar,
     
     # Create animation
     print(f"Creating animation with {num_samples} frames...")
@@ -152,7 +182,7 @@ def plot_csi_phase_data(session: SessionData, save_path: Path = None):
     """
     fig, axes = plt.subplots(4, 4, figsize=(16, 12))
     axes = axes.flatten()
-    channel_data = read_and_process_csi_data(session)
+    channel_data, _ = read_and_process_csi_data(session)
     phase_data = np.angle(channel_data, True)
     # Set titles and labels for each subplot
     for antenna in range(16):

@@ -83,6 +83,8 @@ def generate_launch_description():
                 'data_path': './data',
                 'time_tolerance': 0.5,
                 'organize_by_date': True,
+                'discrete_mode': discrete_mode,
+                'gps_required': False,  # GPS is optional
             }]
         ),
     ])
