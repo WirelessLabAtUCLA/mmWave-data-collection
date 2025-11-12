@@ -50,9 +50,11 @@ class RouterNode(Node):
         topic_name = f'/{self.router_name}/data'
         self.publisher = self.create_publisher(String, topic_name, 10)
         
-        # Trigger subscriber for discrete mode
+        # Trigger subscribers for discrete mode and automated collection
         self.trigger_sub = self.create_subscription(
             Empty, '/trigger_collection', self.trigger_callback, 10)
+        self.rotation_complete_sub = self.create_subscription(
+            Empty, '/rotation_table/rotation_complete', self.rotation_complete_callback, 10)
         
         # SSH client
         self.ssh_client = None
@@ -81,9 +83,15 @@ class RouterNode(Node):
             self.get_logger().error('Failed to connect to router')
     
     def trigger_callback(self, msg):
-        """Handle collection trigger in discrete mode"""
+        """Handle manual collection trigger (discrete mode)"""
         if self.discrete_mode:
-            self.get_logger().info('Triggered router collection')
+            self.get_logger().info('Manual trigger, collecting router data')
+            self.collect_batch()
+    
+    def rotation_complete_callback(self, msg):
+        """Handle rotation complete signal (automated collection)"""
+        if self.discrete_mode:
+            self.get_logger().info('Rotation complete, collecting router data')
             self.collect_batch()
     
     def connect_ssh(self):
@@ -173,7 +181,7 @@ class RouterNode(Node):
             if exit_status != 0:
                 error_output = stderr.read().decode('utf-8')
                 self.get_logger().error(f'Collection script failed: {error_output}')
-                return
+                self.collect_batch()
             
             # 2. SCP the data file back
             local_file = tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.txt')

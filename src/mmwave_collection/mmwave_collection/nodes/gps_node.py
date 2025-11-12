@@ -36,9 +36,11 @@ class GPSNode(Node):
         # Publisher
         self.publisher = self.create_publisher(NavSatFix, '/gps/fix', 10)
         
-        # Trigger subscriber for discrete mode
+        # Trigger subscribers for discrete mode and automated collection
         self.trigger_sub = self.create_subscription(
             Empty, '/trigger_collection', self.trigger_callback, 10)
+        self.rotation_complete_sub = self.create_subscription(
+            Empty, '/rotation_table/rotation_complete', self.rotation_complete_callback, 10)
         
         # Open serial port
         try:
@@ -58,11 +60,18 @@ class GPSNode(Node):
         self.timer = self.create_timer(0.1, self.read_gps)  # 10Hz
     
     def trigger_callback(self, msg):
-        """Handle collection trigger in discrete mode"""
+        """Handle manual collection trigger (discrete mode)"""
         if self.discrete_mode and self.latest_gps is not None:
             # Publish the latest GPS reading
             self.publisher.publish(self.latest_gps)
-            self.get_logger().info('Published GPS sample on trigger')
+            self.get_logger().info('Manual trigger, publishing GPS sample')
+    
+    def rotation_complete_callback(self, msg):
+        """Handle rotation complete signal (automated collection)"""
+        if self.discrete_mode and self.latest_gps is not None:
+            # Publish the latest GPS reading
+            self.publisher.publish(self.latest_gps)
+            self.get_logger().info('Rotation complete, publishing GPS sample')
     
     def read_gps(self):
         """Read and optionally publish GPS data"""

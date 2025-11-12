@@ -186,15 +186,19 @@ class RouterBatch:
         if len(measurements) > 0:
             phase_range = np.linspace(0, 2*np.pi, 1024)
             phase_data = []
+            magnitude_data = []
             for measurement in measurements:
                 phase_data.append(measurement.get_phase_data())
+                magnitude_data.append(measurement.get_magnitude_data())
             
             phase_data = np.array(phase_data)
+            magnitude_data = np.array(magnitude_data)
             # Convert phase indices to radians
             phase_radians = phase_range[phase_data.astype(int)]
             # Create complex CSI from phase
-            H = np.exp(1j * phase_radians)
-            csi_processed_data = H[:, valid_antennas]
+            H = magnitude_data * np.exp(1j * phase_radians)
+            H = H[:, valid_antennas]
+            csi_processed_data = H
 
         return cls(
             batch_id=data['batch_id'],

@@ -16,32 +16,110 @@ from mikrotik_metadata import ordering_sets
 import shutil
 from PIL import Image
 
-def plot_animation_of_beamformer(session: SessionData, save_path: Path = None, plot_image: bool = False):
-    """Plot animation of the beamformer.
+def plot_animation_of_images(session: SessionData, save_path: Path = None):
+    """Plot animation of the images.
     
     Args:
         session: SessionData object
         save_path: Optional path to save the animation video (e.g., 'animation.mp4')
-                  If None, the video will be saved to './videos/{session_id}/csi_polar_azimuth.mp4'
-        plot_image: Whether to plot the camera image side by side with the beamformer pattern
+                  If None, the video will be saved to './videos/{session_id}/images_animation.mp4'
     """
+    image_paths = session.get_image_paths()
+    num_samples = len(image_paths)
+    
+    if num_samples == 0:
+        print("No images found in session!")
+        return
+    
+    # Set default save path if not provided
+    if save_path is None:
+        save_path = Path(f'./videos/{session.session_id}/images_animation.mp4')
+    else:
+        save_path = Path(save_path)
+    
+    # Create directory if it doesn't exist
+    save_path.parent.mkdir(parents=True, exist_ok=True)
+    
+    # Create figure
+    fig = plt.figure(figsize=(12, 10))
+    
+    # Animation update function
+    def update_frame(frame_idx):
+        """Update function for each frame of the animation."""
+        fig.clear()
+        
+        ax = fig.add_subplot(111)
+        img = Image.open(image_paths[frame_idx])
+        ax.imshow(img)
+        ax.axis('off')
+        ax.set_title(f'Image {frame_idx + 1}/{num_samples}\n'
+                    f'Session: {session.session_id}\n'
+                    f'{image_paths[frame_idx].name}', 
+                    pad=20, fontsize=14)
+        
+        print(f'Processed image {frame_idx + 1} of {num_samples}')
+        
+        return ax,
+    
+    # Create animation
+    print(f"Creating animation with {num_samples} images...")
+    anim = FuncAnimation(fig, update_frame, frames=num_samples, 
+                        interval=500, blit=False, repeat=True)
+    
+    # Check if ffmpeg is available
+    ffmpeg_available = shutil.which('ffmpeg') is not None
+    
+    if ffmpeg_available:
+        # Use FFMpegWriter for high-quality MP4
+        writer = FFMpegWriter(fps=2, metadata=dict(artist='mmWave-data-collection'),
+                             bitrate=1800)
+        print(f"Saving animation to: {save_path}")
+    else:
+        # Fallback to PillowWriter for GIF (if ffmpeg not available)
+        print("FFmpeg not found. Falling back to GIF format...")
+        save_path = save_path.with_suffix('.gif')
+        writer = PillowWriter(fps=2, metadata=dict(artist='mmWave-data-collection'))
+        print(f"Saving animation to: {save_path}")
+        print("Tip: Install ffmpeg for MP4 output: conda install ffmpeg or sudo apt install ffmpeg")
+    
+    # Save animation
+    anim.save(str(save_path), writer=writer)
+    plt.close(fig)
+    
+    print(f"Animation saved successfully to: {save_path}")
+
+def plot_animation_of_beamformer(session: SessionData, save_path: Path = None, plot_image: bool = False, azimuth: bool = True):
+    """Plot animation of the beamformer.
+    
+    Args:    
+        session: SessionData object
+        save_path: Optional path to save the animation video (e.g., 'animation.mp4')
+        plot_image: Whether to plot the camera image side by side with the beamformer pattern
+        azimuth: Whether to plot the beamformer pattern in azimuth (True) or elevation (False)
+    """
+    if azimuth:
+        plot_type = 'azimuth'
+    else:
+        plot_type = 'elevation'
+
     channel_data, global_indices = read_and_process_csi_data(session)
     num_samples = channel_data.shape[0]
     valid_antennas = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 11, 13, 21, 23, 25, 27]
 
     # Create antenna arrays for each sample
+    spacing = 0.58 * 58.32 / 60.48
     antenna_arrays = [AntennaArray() for _ in range(num_samples)]
     for i in range(num_samples):
         for antenna in range(32):
             if antenna not in valid_antennas:
                 continue
-            antenna_arrays[i].add_element(ordering_sets[antenna, 0]*0.58 - np.sign(ordering_sets[antenna, 0])*0.29, 
-                0, ordering_sets[antenna, 1]*0.58 - np.sign(ordering_sets[antenna, 1])*0.29)
+            antenna_arrays[i].add_element(ordering_sets[antenna, 0]*spacing - np.sign(ordering_sets[antenna, 0])*spacing/2, 
+                0, ordering_sets[antenna, 1]*spacing - np.sign(ordering_sets[antenna, 1])*spacing/2)
         antenna_arrays[i].set_weights(np.conjugate(channel_data[i, :]))
     
     # Set default save path if not provided
     if save_path is None:
-        save_path = Path(f'./videos/{session.session_id}/csi_polar_azimuth.mp4')
+        save_path = Path(f'./videos/{session.session_id}/csi_polar_{plot_type}.mp4')
     else:
         save_path = Path(save_path)
     
@@ -85,8 +163,11 @@ def plot_animation_of_beamformer(session: SessionData, save_path: Path = None, p
         ax_polar.set_thetamax(90)
         
         # Plot the polar array pattern for the current frame
-        antenna_arrays[frame_idx].show_polar_array_pattern_azimuth(ax_polar, el=0, N=1024, full=True)
-        
+        if azimuth:
+            antenna_arrays[frame_idx].show_polar_array_pattern_azimuth(ax_polar, el=0, N=1024, full=True)
+        else:
+            antenna_arrays[frame_idx].show_polar_array_pattern_elevation(ax_polar, az=np.deg2rad(5), N=1024, full=True)
+
         # Add frame counter and session info
         ax_polar.set_title(f'Beamformer Pattern - Frame {frame_idx + 1}/{num_samples}\n'
                           f'Session: {session.session_id}', pad=20)

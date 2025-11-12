@@ -28,6 +28,8 @@ setup(
             'gps_node = mmwave_collection.nodes.gps_node:main',
             'camera_node = mmwave_collection.nodes.camera_node:main',
             'sync_node = mmwave_collection.nodes.sync_node:main',
+            'rotation_table_node = mmwave_collection.nodes.rotation_table_node:main',
+            'automated_collection_node = mmwave_collection.nodes.automated_collection_node:main',
         ],
     },
 )

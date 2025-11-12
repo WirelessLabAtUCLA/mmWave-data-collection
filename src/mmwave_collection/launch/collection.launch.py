@@ -69,6 +69,7 @@ def generate_launch_description():
                 'width': 1920,
                 'height': 1080,
                 'jpeg_quality': 85,
+                'fps': 30,  # Camera FPS (higher = lower latency)
                 'discrete_mode': discrete_mode,
             }]
         ),

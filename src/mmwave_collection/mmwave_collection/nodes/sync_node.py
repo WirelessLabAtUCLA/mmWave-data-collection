@@ -3,7 +3,7 @@
 import rclpy
 from rclpy.node import Node
 from rclpy.time import Time
-from std_msgs.msg import String
+from std_msgs.msg import String, Empty
 from sensor_msgs.msg import NavSatFix, CompressedImage
 from message_filters import Subscriber, ApproximateTimeSynchronizer
 import json
@@ -52,6 +52,9 @@ class SyncNode(Node):
         self.router_buffer = deque(maxlen=max_queue_size)
         self.gps_buffer = deque(maxlen=max_queue_size)
         self.camera_buffer = deque(maxlen=max_queue_size)
+        
+        # Publisher for save confirmation
+        self.save_confirm_pub = self.create_publisher(Empty, '/sync_node/save_complete', 10)
         
         # Direct subscribers
         self.rx_router_sub = self.create_subscription(
@@ -275,6 +278,9 @@ class SyncNode(Node):
                 f'GPS: N/A - '
                 f'Router batch: {measurement_count} measurements'
             )
+        
+        # Publish save confirmation for automated collection coordination
+        self.save_confirm_pub.publish(Empty())
     
     def destroy_node(self):
         """Cleanup - finalize metadata"""
