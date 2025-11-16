@@ -10,13 +10,13 @@ def generate_launch_description():
     # Declare launch arguments
     angle_start_arg = DeclareLaunchArgument(
         'angle_start',
-        default_value='-60',
+        default_value='-80',
         description='Starting angle in degrees'
     )
     
     angle_end_arg = DeclareLaunchArgument(
         'angle_end',
-        default_value='60',
+        default_value='80',
         description='Ending angle in degrees'
     )
     
@@ -51,7 +51,7 @@ def generate_launch_description():
             name='rotation_table_node',
             output='screen',
             parameters=[{
-                'rotation_table_device': '/dev/ttyACM0',
+                'rotation_table_device': '/dev/ttyACM1',
                 'rotation_table_baudrate': 115200,
                 'timeout': 0.1,
                 'discrete_mode': True,  # Use discrete mode for automated collection
@@ -104,7 +104,7 @@ def generate_launch_description():
             name='gps_node',
             output='screen',
             parameters=[{
-                'device': '/dev/ttyACM1',
+                'device': '/dev/ttyACM0',
                 'baudrate': 9600,
                 'auto_detect': False,
                 'discrete_mode': True,

@@ -193,8 +193,10 @@ class RouterBatch:
             
             phase_data = np.array(phase_data)
             magnitude_data = np.array(magnitude_data)
+            
             # Convert phase indices to radians
             phase_radians = phase_range[phase_data.astype(int)]
+
             # Create complex CSI from phase
             H = magnitude_data * np.exp(1j * phase_radians)
             H = H[:, valid_antennas]

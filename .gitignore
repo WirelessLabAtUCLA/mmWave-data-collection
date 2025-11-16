@@ -17,8 +17,7 @@ log/
 *.bag
 *.db3
 
-# Data & Logs
-data/
+# Logs
 logs/
 *.log
 

@@ -85,35 +85,35 @@ def process_csi_data(H: np.ndarray, sample_rate: float = 0.4) -> np.ndarray:
         H = np.delete(H, indexes_to_remove, axis=0)
         global_indices = np.delete(global_indices, indexes_to_remove)
 
-    # # Second pass: Remove remaining outliers with stricter threshold
-    # if H.shape[0] > 2:
-    #     unwrapped_phase = np.unwrap(np.angle(H), axis=0)
-    #     phase_velocity = np.diff(unwrapped_phase, axis=0)
+    # Second pass: Remove remaining outliers with stricter threshold
+    if H.shape[0] > 2:
+        unwrapped_phase = np.unwrap(np.angle(H), axis=0)
+        phase_velocity = np.diff(unwrapped_phase, axis=0)
         
-    #     indexes_to_remove = []
-    #     for i in remove_peaks_ant_p1:
-    #         if i >= phase_velocity.shape[1]:
-    #             continue
+        indexes_to_remove = []
+        for i in remove_peaks_ant_p1:
+            if i >= phase_velocity.shape[1]:
+                continue
                 
-    #         pv = phase_velocity[:, i]
+            pv = phase_velocity[:, i]
             
-    #         # Stricter threshold
-    #         min_peak_prominence = np.std(np.abs(pv)) * 4.2
-    #         min_peak_distance = int(max(1, round(0.005 / sample_rate)))
+            # Stricter threshold
+            min_peak_prominence = np.std(np.abs(pv)) * 4.2
+            min_peak_distance = int(max(1, round(0.005 / sample_rate)))
             
-    #         peaks, _ = find_peaks(np.abs(pv), 
-    #                                 prominence=min_peak_prominence,
-    #                                 distance=min_peak_distance)
+            peaks, _ = find_peaks(np.abs(pv), 
+                                    prominence=min_peak_prominence,
+                                    distance=min_peak_distance)
             
-    #         for peak in peaks:
-    #             indexes_to_remove.extend([peak-1, peak, peak+1, peak+2])
+            for peak in peaks:
+                indexes_to_remove.extend([peak-1, peak, peak+1, peak+2])
         
-    #     indexes_to_remove = np.unique(indexes_to_remove)
-    #     indexes_to_remove = indexes_to_remove[(indexes_to_remove >= 0) & (indexes_to_remove < len(H))]
+        indexes_to_remove = np.unique(indexes_to_remove)
+        indexes_to_remove = indexes_to_remove[(indexes_to_remove >= 0) & (indexes_to_remove < len(H))]
         
-    #     if len(indexes_to_remove) > 0:
-    #         H = np.delete(H, indexes_to_remove, axis=0)
-    #         global_indices = np.delete(global_indices, indexes_to_remove)
+        if len(indexes_to_remove) > 0:
+            H = np.delete(H, indexes_to_remove, axis=0)
+            global_indices = np.delete(global_indices, indexes_to_remove)
 
     # Apply Savitzky-Golay filter for smoothing
     if H.shape[0] >= 9:  # Need at least window_length points
