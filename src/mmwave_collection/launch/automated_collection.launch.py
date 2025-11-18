@@ -10,13 +10,13 @@ def generate_launch_description():
     # Declare launch arguments
     angle_start_arg = DeclareLaunchArgument(
         'angle_start',
-        default_value='-80',
+        default_value='-60',
         description='Starting angle in degrees'
     )
     
     angle_end_arg = DeclareLaunchArgument(
         'angle_end',
-        default_value='80',
+        default_value='60',
         description='Ending angle in degrees'
     )
     
@@ -28,7 +28,7 @@ def generate_launch_description():
     
     stabilization_time_arg = DeclareLaunchArgument(
         'stabilization_time',
-        default_value='2.0',
+        default_value='5.0',
         description='Time to wait after rotation for stabilization (seconds)'
     )
     
@@ -51,7 +51,7 @@ def generate_launch_description():
             name='rotation_table_node',
             output='screen',
             parameters=[{
-                'rotation_table_device': '/dev/ttyACM1',
+                'rotation_table_device': '/dev/ttyACM0',
                 'rotation_table_baudrate': 115200,
                 'timeout': 0.1,
                 'discrete_mode': True,  # Use discrete mode for automated collection
@@ -74,7 +74,7 @@ def generate_launch_description():
                 'mac_address': '\\xf4\\x1e\\x57\\x64\\x92\\xae',
                 'remote_file': '/tmp/csi_measurements.txt',
                 'remote_script': '/scripts/collect_csi.sh',
-                'measurements_per_batch': 10,
+                'measurements_per_batch': 100,
                 'batch_interval': 1.0,
                 'connection_timeout': 10,
                 'discrete_mode': True,  # Discrete mode - wait for triggers
@@ -104,7 +104,7 @@ def generate_launch_description():
             name='gps_node',
             output='screen',
             parameters=[{
-                'device': '/dev/ttyACM0',
+                'device': '/dev/ttyACM1',
                 'baudrate': 9600,
                 'auto_detect': False,
                 'discrete_mode': True,

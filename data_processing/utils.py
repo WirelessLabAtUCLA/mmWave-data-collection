@@ -1,34 +1,5 @@
-from typing import List, Tuple
 import numpy as np
 from scipy.signal import find_peaks, savgol_filter
-
-from session_data import SessionData
-
-def read_and_process_csi_data(session: SessionData) -> Tuple[np.ndarray, List[int]]:
-    """Read and process CSI data from a session.
-    
-    Args:
-        session: SessionData object
-        
-    Returns:
-        Processed CSI data
-    """
-    channel_data = np.zeros((1, 16), dtype=np.complex128)
-    
-    for dp in session.data_points:
-        # Check if router batch is loaded
-        if dp.router_batch is None:
-            continue
-            
-        csi_data = dp.router_batch.csi_processed_data
-        
-        # Check if CSI data is not empty and has the right shape
-        if csi_data.size == 0 or len(csi_data.shape) < 2:
-            continue
-        
-        channel_data = np.vstack((channel_data, csi_data))
-
-    return process_csi_data(channel_data[1:, :])
 
 def process_csi_data(H: np.ndarray, sample_rate: float = 0.4) -> np.ndarray:
     """Process CSI data by removing outliers and smoothing.
@@ -47,8 +18,6 @@ def process_csi_data(H: np.ndarray, sample_rate: float = 0.4) -> np.ndarray:
     """
     if H.size == 0 or len(H.shape) != 2:
         return H
-
-    global_indices = np.arange(H.shape[0])
 
     # Antennas to check for outliers 
     remove_peaks_ant_p1 = [2, 3, 4, 6, 7, 8, 11, 13, 21, 23, 25, 27]
@@ -83,7 +52,6 @@ def process_csi_data(H: np.ndarray, sample_rate: float = 0.4) -> np.ndarray:
 
     if len(indexes_to_remove) > 0:
         H = np.delete(H, indexes_to_remove, axis=0)
-        global_indices = np.delete(global_indices, indexes_to_remove)
 
     # Second pass: Remove remaining outliers with stricter threshold
     if H.shape[0] > 2:
@@ -113,7 +81,6 @@ def process_csi_data(H: np.ndarray, sample_rate: float = 0.4) -> np.ndarray:
         
         if len(indexes_to_remove) > 0:
             H = np.delete(H, indexes_to_remove, axis=0)
-            global_indices = np.delete(global_indices, indexes_to_remove)
 
     # Apply Savitzky-Golay filter for smoothing
     if H.shape[0] >= 9:  # Need at least window_length points
@@ -128,4 +95,4 @@ def process_csi_data(H: np.ndarray, sample_rate: float = 0.4) -> np.ndarray:
         
         H = smoothed_channel
 
-    return (H, global_indices)
+    return H

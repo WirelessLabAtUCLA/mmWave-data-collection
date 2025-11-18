@@ -10,7 +10,6 @@ import numpy as np
 from pathlib import Path
 from matplotlib.animation import FuncAnimation, FFMpegWriter, PillowWriter
 from antenna_array import AntennaArray
-from utils import read_and_process_csi_data
 from session_data import SessionData
 from mikrotik_metadata import ordering_sets
 import shutil
@@ -88,7 +87,7 @@ def plot_animation_of_images(session: SessionData, save_path: Path = None):
     
     print(f"Animation saved successfully to: {save_path}")
 
-def plot_animation_of_beamformer(session: SessionData, save_path: Path = None, plot_image: bool = False, azimuth: bool = True):
+def plot_animation_of_beamformer(session: SessionData, save_path: Path = None, plot_image: bool = False, azimuth: bool = True, averaged: bool = True):
     """Plot animation of the beamformer.
     
     Args:    
@@ -102,12 +101,12 @@ def plot_animation_of_beamformer(session: SessionData, save_path: Path = None, p
     else:
         plot_type = 'elevation'
 
-    channel_data, global_indices = read_and_process_csi_data(session)
+    channel_data = session.get_csi_data(averaged=averaged)
     num_samples = channel_data.shape[0]
     valid_antennas = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 11, 13, 21, 23, 25, 27]
 
     # Create antenna arrays for each sample
-    spacing = 0.58 * 58.32 / 60.48
+    spacing = 0.58 * session.frequency / 60.48
     antenna_arrays = [AntennaArray() for _ in range(num_samples)]
     for i in range(num_samples):
         for antenna in range(32):
@@ -119,13 +118,10 @@ def plot_animation_of_beamformer(session: SessionData, save_path: Path = None, p
     
     # Set default save path if not provided
     if save_path is None:
-        save_path = Path(f'./videos/{session.session_id}/csi_polar_{plot_type}.mp4')
+        save_path = session.get_save_plot_path() / f'csi_polar_{plot_type}.mp4'
     else:
         save_path = Path(save_path)
-    
-    # Create directory if it doesn't exist
-    save_path.parent.mkdir(parents=True, exist_ok=True)
-    
+        
     # Get image paths if plot_image is True
     image_paths = None
     measurements_per_image = int(session.metadata['data_points'][0]['router_batch']['measurement_count'])
@@ -182,7 +178,7 @@ def plot_animation_of_beamformer(session: SessionData, save_path: Path = None, p
     # Create animation
     print(f"Creating animation with {num_samples} frames...")
     anim = FuncAnimation(fig, update_frame, frames=num_samples, 
-                        interval=200, blit=False, repeat=True)
+                        interval=100, blit=False, repeat=True)
     
     # Check if ffmpeg is available
     ffmpeg_available = shutil.which('ffmpeg') is not None
@@ -204,7 +200,7 @@ def plot_animation_of_beamformer(session: SessionData, save_path: Path = None, p
     anim.save(str(save_path), writer=writer)
     plt.close(fig)
     
-    print(f"Animation saved successfully to: {save_path}")
+    print(f"Animation saved successfully to: {session.get_save_plot_path() / save_path}")
     
 
 def plot_gps_trajectory(session: SessionData, save_path: Path = None):
@@ -254,7 +250,7 @@ def plot_gps_trajectory(session: SessionData, save_path: Path = None):
         plt.show()
 
 
-def plot_csi_phase_data(session: SessionData, save_path: Path = None):
+def plot_csi_phase_data(session: SessionData, save_path: Path = None, averaged: bool = True):
     """Plot CSI phase data.
     
     Args:
@@ -263,7 +259,7 @@ def plot_csi_phase_data(session: SessionData, save_path: Path = None):
     """
     fig, axes = plt.subplots(4, 4, figsize=(16, 12))
     axes = axes.flatten()
-    channel_data, _ = read_and_process_csi_data(session)
+    channel_data = session.get_csi_data(averaged=averaged)
     phase_data = np.angle(channel_data, True)
     # Set titles and labels for each subplot
     for antenna in range(16):
@@ -282,8 +278,6 @@ def plot_csi_phase_data(session: SessionData, save_path: Path = None):
         print(f"CSI phase plot saved to: {save_path}")
     else:
         plt.show()
-
-        
 
 
 def plot_temporal_analysis(session: SessionData, save_path: Path = None):

@@ -11,6 +11,9 @@ import numpy as np
 import re
 import os
 
+from utils import process_csi_data
+
+FREQ_CHANNELS = {1 : 58.32, 2 : 60.48, 3 : 62.64, 4 : 64.8}
 
 @dataclass
 class GPSCoordinate:
@@ -154,6 +157,7 @@ class RouterBatch:
     batch_id: int
     timestamp: datetime
     csi_processed_data: np.ndarray
+    averaged_csi_data: np.ndarray
     measurements: List[RouterMeasurement]
     count: int
     file_path: Optional[Path] = None
@@ -182,6 +186,7 @@ class RouterBatch:
 
         # Process CSI data if we have valid measurements
         csi_processed_data = np.array([])
+        averaged_csi_data = np.array([])
         valid_antennas = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 11, 13, 21, 23, 25, 27];
         if len(measurements) > 0:
             phase_range = np.linspace(0, 2*np.pi, 1024)
@@ -198,16 +203,18 @@ class RouterBatch:
             phase_radians = phase_range[phase_data.astype(int)]
 
             # Create complex CSI from phase
-            H = magnitude_data * np.exp(1j * phase_radians)
+            H = np.exp(1j * phase_radians)
             H = H[:, valid_antennas]
-            csi_processed_data = H
+            csi_processed_data = process_csi_data(H)
+            averaged_csi_data = np.mean(csi_processed_data, axis=0)
 
         return cls(
             batch_id=data['batch_id'],
             timestamp=datetime.fromisoformat(data['timestamp']),
             csi_processed_data=csi_processed_data,
+            averaged_csi_data=averaged_csi_data,
             measurements=measurements,
-            count=len(measurements),  # Update count to actual valid measurements
+            count=len(csi_processed_data),  # Update count to actual valid measurements
             file_path=file_path
         )
     
@@ -288,10 +295,11 @@ class SessionData:
     total_samples: int
     data_points: List[DataPoint]
     session_dir: Path
+    frequency: int
     metadata: Dict[str, Any] = field(default_factory=dict)
     
     @classmethod
-    def from_directory(cls, session_dir: Path) -> 'SessionData':
+    def from_directory(cls, session_dir: Path, channel: int = 1) -> 'SessionData':
         """Load session data from a directory.
         
         Args:
@@ -300,6 +308,8 @@ class SessionData:
         Returns:
             SessionData object with all session information
         """
+        if channel not in FREQ_CHANNELS:
+            raise ValueError(f"Invalid channel: {channel}")
         session_dir = Path(session_dir)
         metadata_file = session_dir / 'metadata.json'
         
@@ -321,8 +331,21 @@ class SessionData:
             total_samples=metadata['total_samples'],
             data_points=data_points,
             session_dir=session_dir,
-            metadata=metadata
+            metadata=metadata,
+            frequency=FREQ_CHANNELS[channel]
         )
+
+    def get_csi_data(self, averaged: bool = False) -> np.ndarray:
+        """Get CSI data from all data points."""
+        channel_data = np.zeros((1, 16), dtype=np.complex128)
+        for dp in self.data_points:
+            if averaged:
+                csi_data = dp.router_batch.averaged_csi_data
+            else:
+                csi_data = dp.router_batch.csi_processed_data
+            channel_data = np.vstack((channel_data, csi_data))
+        return channel_data[1:, :]
+
     
     def load_all_router_batches(self) -> None:
         """Load all router batch data for all data points."""
@@ -358,6 +381,12 @@ class SessionData:
     def get_image_paths(self) -> List[Path]:
         """Get list of all image paths."""
         return [dp.image_path for dp in self.data_points if dp.image_path]
+
+    def get_save_plot_path(self) -> Path:
+        """Get the path to save the plot."""
+        if not os.path.exists(self.session_dir / 'plots'):
+            os.makedirs(self.session_dir / 'plots')
+        return self.session_dir / 'plots' 
     
     def summary(self) -> str:
         """Get a summary string of the session."""
@@ -371,60 +400,6 @@ class SessionData:
             f"Data Points: {len(self.data_points)}\n"
             f"Images: {len(self.get_image_paths())}\n"
         )
-    
-    def get_data_quality_report(self) -> Dict[str, Any]:
-        """Get comprehensive data quality report for the session.
-        
-        Returns:
-            Dictionary with quality metrics across all batches
-        """
-        total_measurements = 0
-        valid_measurements = 0
-        batches_with_data = 0
-        empty_batches = 0
-        
-        for dp in self.data_points:
-            try:
-                batch = dp.load_router_batch(self.session_dir)
-                stats = batch.get_quality_stats()
-                
-                total_measurements += stats['total_measurements']
-                valid_measurements += stats['valid_measurements']
-                
-                if stats['has_data']:
-                    batches_with_data += 1
-                else:
-                    empty_batches += 1
-            except Exception:
-                empty_batches += 1
-        
-        return {
-            'total_data_points': len(self.data_points),
-            'batches_with_data': batches_with_data,
-            'empty_batches': empty_batches,
-            'total_measurements': total_measurements,
-            'valid_measurements': valid_measurements,
-            'invalid_measurements': total_measurements - valid_measurements,
-            'overall_validity_rate': valid_measurements / total_measurements if total_measurements > 0 else 0.0,
-            'avg_measurements_per_batch': total_measurements / batches_with_data if batches_with_data > 0 else 0.0
-        }
-    
-    def print_quality_report(self) -> None:
-        """Print a formatted data quality report."""
-        report = self.get_data_quality_report()
-        print(f"\n{'='*60}")
-        print(f"Data Quality Report - {self.session_id}")
-        print(f"{'='*60}")
-        print(f"Total Data Points: {report['total_data_points']}")
-        print(f"Batches with Data: {report['batches_with_data']}")
-        print(f"Empty Batches: {report['empty_batches']}")
-        print(f"\nMeasurement Statistics:")
-        print(f"  Total Measurements: {report['total_measurements']}")
-        print(f"  Valid Measurements: {report['valid_measurements']}")
-        print(f"  Invalid Measurements: {report['invalid_measurements']}")
-        print(f"  Overall Validity Rate: {report['overall_validity_rate']*100:.2f}%")
-        print(f"  Avg Measurements/Batch: {report['avg_measurements_per_batch']:.2f}")
-        print(f"{'='*60}\n")
     
     def __repr__(self) -> str:
         return f"SessionData(session_id='{self.session_id}', samples={self.total_samples})"
