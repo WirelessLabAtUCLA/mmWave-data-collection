@@ -46,3 +46,7 @@ echo "  Terminal 1: ros2 launch mmwave_collection collection.launch.py discrete_
 echo "  Terminal 2: python3 tui/app.py"
 echo "  In TUI, press SPACE to trigger collection"
 
+
+
+
+
