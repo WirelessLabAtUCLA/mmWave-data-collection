@@ -28,7 +28,7 @@ def generate_launch_description():
     
     stabilization_time_arg = DeclareLaunchArgument(
         'stabilization_time',
-        default_value='5.0',
+        default_value='10.0',
         description='Time to wait after rotation for stabilization (seconds)'
     )
     

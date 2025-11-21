@@ -1,0 +1,1823 @@
+{
+  "session_id": "session_135938",
+  "start_time": "2025-11-20T13:59:38.401994",
+  "data_points": [
+    {
+      "index": 1,
+      "timestamp": "2025-11-20T14:00:02.612731",
+      "gps": {
+        "latitude": 0.0,
+        "longitude": 0.0,
+        "altitude": 0.0
+      },
+      "router_batch": {
+        "batch_id": 0,
+        "measurement_count": 250,
+        "file": "rx_router_data/20251120_140002_612_batch0.json"
+      },
+      "image": "images/20251120_140002_612.jpg"
+    },
+    {
+      "index": 2,
+      "timestamp": "2025-11-20T14:00:22.112492",
+      "gps": {
+        "latitude": 0.0,
+        "longitude": 0.0,
+        "altitude": 0.0
+      },
+      "router_batch": {
+        "batch_id": 1,
+        "measurement_count": 250,
+        "file": "rx_router_data/20251120_140022_112_batch1.json"
+      },
+      "image": "images/20251120_140022_112.jpg"
+    },
+    {
+      "index": 3,
+      "timestamp": "2025-11-20T14:00:41.612628",
+      "gps": {
+        "latitude": 34.067022333333334,
+        "longitude": -118.4440775,
+        "altitude": 453.1
+      },
+      "router_batch": {
+        "batch_id": 2,
+        "measurement_count": 250,
+        "file": "rx_router_data/20251120_140041_612_batch2.json"
+      },
+      "image": "images/20251120_140041_612.jpg"
+    },
+    {
+      "index": 4,
+      "timestamp": "2025-11-20T14:01:01.112601",
+      "gps": {
+        "latitude": 34.06753966666667,
+        "longitude": -118.444065,
+        "altitude": 325.3
+      },
+      "router_batch": {
+        "batch_id": 3,
+        "measurement_count": 250,
+        "file": "rx_router_data/20251120_140101_112_batch3.json"
+      },
+      "image": "images/20251120_140101_112.jpg"
+    },
+    {
+      "index": 5,
+      "timestamp": "2025-11-20T14:01:20.712653",
+      "gps": {
+        "latitude": 34.06773866666666,
+        "longitude": -118.444117,
+        "altitude": 274.4
+      },
+      "router_batch": {
+        "batch_id": 4,
+        "measurement_count": 250,
+        "file": "rx_router_data/20251120_140120_712_batch4.json"
+      },
+      "image": "images/20251120_140120_712.jpg"
+    },
+    {
+      "index": 6,
+      "timestamp": "2025-11-20T14:01:41.312802",
+      "gps": {
+        "latitude": 34.067794,
+        "longitude": -118.44414283333333,
+        "altitude": 262.7
+      },
+      "router_batch": {
+        "batch_id": 5,
+        "measurement_count": 250,
+        "file": "rx_router_data/20251120_140141_312_batch5.json"
+      },
+      "image": "images/20251120_140141_312.jpg"
+    },
+    {
+      "index": 7,
+      "timestamp": "2025-11-20T14:02:01.912605",
+      "gps": {
+        "latitude": 34.067795333333336,
+        "longitude": -118.444183,
+        "altitude": 252.3
+      },
+      "router_batch": {
+        "batch_id": 6,
+        "measurement_count": 250,
+        "file": "rx_router_data/20251120_140201_912_batch6.json"
+      },
+      "image": "images/20251120_140201_912.jpg"
+    },
+    {
+      "index": 8,
+      "timestamp": "2025-11-20T14:02:21.512514",
+      "gps": {
+        "latitude": 34.067793,
+        "longitude": -118.444242,
+        "altitude": 255.8
+      },
+      "router_batch": {
+        "batch_id": 7,
+        "measurement_count": 250,
+        "file": "rx_router_data/20251120_140221_512_batch7.json"
+      },
+      "image": "images/20251120_140221_512.jpg"
+    },
+    {
+      "index": 9,
+      "timestamp": "2025-11-20T14:02:41.113048",
+      "gps": {
+        "latitude": 34.06781,
+        "longitude": -118.44424016666666,
+        "altitude": 256.9
+      },
+      "router_batch": {
+        "batch_id": 8,
+        "measurement_count": 250,
+        "file": "rx_router_data/20251120_140241_113_batch8.json"
+      },
+      "image": "images/20251120_140241_113.jpg"
+    },
+    {
+      "index": 10,
+      "timestamp": "2025-11-20T14:03:00.712766",
+      "gps": {
+        "latitude": 34.06780583333333,
+        "longitude": -118.44423566666667,
+        "altitude": 260.3
+      },
+      "router_batch": {
+        "batch_id": 9,
+        "measurement_count": 250,
+        "file": "rx_router_data/20251120_140300_712_batch9.json"
+      },
+      "image": "images/20251120_140300_712.jpg"
+    },
+    {
+      "index": 11,
+      "timestamp": "2025-11-20T14:03:20.412854",
+      "gps": {
+        "latitude": 34.068064666666665,
+        "longitude": -118.44428566666667,
+        "altitude": 202.5
+      },
+      "router_batch": {
+        "batch_id": 10,
+        "measurement_count": 250,
+        "file": "rx_router_data/20251120_140320_412_batch10.json"
+      },
+      "image": "images/20251120_140320_412.jpg"
+    },
+    {
+      "index": 12,
+      "timestamp": "2025-11-20T14:03:40.012571",
+      "gps": {
+        "latitude": 34.068184333333335,
+        "longitude": -118.44432583333334,
+        "altitude": 165.5
+      },
+      "router_batch": {
+        "batch_id": 11,
+        "measurement_count": 250,
+        "file": "rx_router_data/20251120_140340_012_batch11.json"
+      },
+      "image": "images/20251120_140340_012.jpg"
+    },
+    {
+      "index": 13,
+      "timestamp": "2025-11-20T14:03:59.512815",
+      "gps": {
+        "latitude": 34.068202166666666,
+        "longitude": -118.44434933333334,
+        "altitude": 154.9
+      },
+      "router_batch": {
+        "batch_id": 12,
+        "measurement_count": 250,
+        "file": "rx_router_data/20251120_140359_512_batch12.json"
+      },
+      "image": "images/20251120_140359_512.jpg"
+    },
+    {
+      "index": 14,
+      "timestamp": "2025-11-20T14:04:19.012613",
+      "gps": {
+        "latitude": 34.068261,
+        "longitude": -118.44432416666666,
+        "altitude": 145.4
+      },
+      "router_batch": {
+        "batch_id": 13,
+        "measurement_count": 250,
+        "file": "rx_router_data/20251120_140419_012_batch13.json"
+      },
+      "image": "images/20251120_140419_012.jpg"
+    },
+    {
+      "index": 15,
+      "timestamp": "2025-11-20T14:04:38.612936",
+      "gps": {
+        "latitude": 34.068259,
+        "longitude": -118.44427716666667,
+        "altitude": 137.5
+      },
+      "router_batch": {
+        "batch_id": 14,
+        "measurement_count": 250,
+        "file": "rx_router_data/20251120_140438_612_batch14.json"
+      },
+      "image": "images/20251120_140438_612.jpg"
+    },
+    {
+      "index": 16,
+      "timestamp": "2025-11-20T14:04:58.112537",
+      "gps": {
+        "latitude": 34.068248833333335,
+        "longitude": -118.44430016666666,
+        "altitude": 135.2
+      },
+      "router_batch": {
+        "batch_id": 15,
+        "measurement_count": 250,
+        "file": "rx_router_data/20251120_140458_112_batch15.json"
+      },
+      "image": "images/20251120_140458_112.jpg"
+    },
+    {
+      "index": 17,
+      "timestamp": "2025-11-20T14:05:17.813119",
+      "gps": {
+        "latitude": 34.068143666666664,
+        "longitude": -118.44453366666667,
+        "altitude": 137.9
+      },
+      "router_batch": {
+        "batch_id": 16,
+        "measurement_count": 250,
+        "file": "rx_router_data/20251120_140517_813_batch16.json"
+      },
+      "image": "images/20251120_140517_813.jpg"
+    },
+    {
+      "index": 18,
+      "timestamp": "2025-11-20T14:05:37.413018",
+      "gps": {
+        "latitude": 34.06820833333333,
+        "longitude": -118.44435,
+        "altitude": 137.8
+      },
+      "router_batch": {
+        "batch_id": 17,
+        "measurement_count": 250,
+        "file": "rx_router_data/20251120_140537_413_batch17.json"
+      },
+      "image": "images/20251120_140537_413.jpg"
+    },
+    {
+      "index": 19,
+      "timestamp": "2025-11-20T14:05:57.012761",
+      "gps": {
+        "latitude": 34.06827966666667,
+        "longitude": -118.44413966666667,
+        "altitude": 135.0
+      },
+      "router_batch": {
+        "batch_id": 18,
+        "measurement_count": 250,
+        "file": "rx_router_data/20251120_140557_012_batch18.json"
+      },
+      "image": "images/20251120_140557_012.jpg"
+    },
+    {
+      "index": 20,
+      "timestamp": "2025-11-20T14:06:16.512558",
+      "gps": {
+        "latitude": 34.06830733333334,
+        "longitude": -118.444121,
+        "altitude": 135.0
+      },
+      "router_batch": {
+        "batch_id": 19,
+        "measurement_count": 250,
+        "file": "rx_router_data/20251120_140616_512_batch19.json"
+      },
+      "image": "images/20251120_140616_512.jpg"
+    },
+    {
+      "index": 21,
+      "timestamp": "2025-11-20T14:06:36.612773",
+      "gps": {
+        "latitude": 34.06830766666667,
+        "longitude": -118.444139,
+        "altitude": 136.6
+      },
+      "router_batch": {
+        "batch_id": 20,
+        "measurement_count": 250,
+        "file": "rx_router_data/20251120_140636_612_batch20.json"
+      },
+      "image": "images/20251120_140636_612.jpg"
+    },
+    {
+      "index": 22,
+      "timestamp": "2025-11-20T14:06:56.412905",
+      "gps": {
+        "latitude": 34.06828816666667,
+        "longitude": -118.444143,
+        "altitude": 140.8
+      },
+      "router_batch": {
+        "batch_id": 21,
+        "measurement_count": 250,
+        "file": "rx_router_data/20251120_140656_412_batch21.json"
+      },
+      "image": "images/20251120_140656_412.jpg"
+    },
+    {
+      "index": 23,
+      "timestamp": "2025-11-20T14:07:16.212811",
+      "gps": {
+        "latitude": 34.068267666666664,
+        "longitude": -118.44411866666667,
+        "altitude": 141.6
+      },
+      "router_batch": {
+        "batch_id": 22,
+        "measurement_count": 250,
+        "file": "rx_router_data/20251120_140716_212_batch22.json"
+      },
+      "image": "images/20251120_140716_212.jpg"
+    },
+    {
+      "index": 24,
+      "timestamp": "2025-11-20T14:07:35.912770",
+      "gps": {
+        "latitude": 34.0683395,
+        "longitude": -118.44411033333333,
+        "altitude": 133.7
+      },
+      "router_batch": {
+        "batch_id": 23,
+        "measurement_count": 250,
+        "file": "rx_router_data/20251120_140735_912_batch23.json"
+      },
+      "image": "images/20251120_140735_912.jpg"
+    },
+    {
+      "index": 25,
+      "timestamp": "2025-11-20T14:07:55.612777",
+      "gps": {
+        "latitude": 34.06828483333334,
+        "longitude": -118.44419883333333,
+        "altitude": 136.0
+      },
+      "router_batch": {
+        "batch_id": 24,
+        "measurement_count": 250,
+        "file": "rx_router_data/20251120_140755_612_batch24.json"
+      },
+      "image": "images/20251120_140755_612.jpg"
+    },
+    {
+      "index": 26,
+      "timestamp": "2025-11-20T14:08:15.212766",
+      "gps": {
+        "latitude": 34.068219166666665,
+        "longitude": -118.44428316666666,
+        "altitude": 140.4
+      },
+      "router_batch": {
+        "batch_id": 25,
+        "measurement_count": 250,
+        "file": "rx_router_data/20251120_140815_212_batch25.json"
+      },
+      "image": "images/20251120_140815_212.jpg"
+    },
+    {
+      "index": 27,
+      "timestamp": "2025-11-20T14:08:34.713111",
+      "gps": {
+        "latitude": 34.068274,
+        "longitude": -118.44419016666667,
+        "altitude": 141.9
+      },
+      "router_batch": {
+        "batch_id": 26,
+        "measurement_count": 250,
+        "file": "rx_router_data/20251120_140834_713_batch26.json"
+      },
+      "image": "images/20251120_140834_713.jpg"
+    },
+    {
+      "index": 28,
+      "timestamp": "2025-11-20T14:08:54.312658",
+      "gps": {
+        "latitude": 34.068182,
+        "longitude": -118.44432916666666,
+        "altitude": 150.3
+      },
+      "router_batch": {
+        "batch_id": 27,
+        "measurement_count": 250,
+        "file": "rx_router_data/20251120_140854_312_batch27.json"
+      },
+      "image": "images/20251120_140854_312.jpg"
+    },
+    {
+      "index": 29,
+      "timestamp": "2025-11-20T14:09:14.913372",
+      "gps": {
+        "latitude": 34.06813416666667,
+        "longitude": -118.444404,
+        "altitude": 155.5
+      },
+      "router_batch": {
+        "batch_id": 28,
+        "measurement_count": 250,
+        "file": "rx_router_data/20251120_140914_913_batch28.json"
+      },
+      "image": "images/20251120_140914_913.jpg"
+    },
+    {
+      "index": 30,
+      "timestamp": "2025-11-20T14:09:34.512786",
+      "gps": {
+        "latitude": 34.068172833333335,
+        "longitude": -118.44432983333333,
+        "altitude": 147.7
+      },
+      "router_batch": {
+        "batch_id": 29,
+        "measurement_count": 250,
+        "file": "rx_router_data/20251120_140934_512_batch29.json"
+      },
+      "image": "images/20251120_140934_512.jpg"
+    },
+    {
+      "index": 31,
+      "timestamp": "2025-11-20T14:09:54.112817",
+      "gps": {
+        "latitude": 34.06818,
+        "longitude": -118.44430933333334,
+        "altitude": 142.4
+      },
+      "router_batch": {
+        "batch_id": 30,
+        "measurement_count": 250,
+        "file": "rx_router_data/20251120_140954_112_batch30.json"
+      },
+      "image": "images/20251120_140954_112.jpg"
+    },
+    {
+      "index": 32,
+      "timestamp": "2025-11-20T14:10:13.812838",
+      "gps": {
+        "latitude": 34.06819466666666,
+        "longitude": -118.4442785,
+        "altitude": 138.2
+      },
+      "router_batch": {
+        "batch_id": 31,
+        "measurement_count": 250,
+        "file": "rx_router_data/20251120_141013_812_batch31.json"
+      },
+      "image": "images/20251120_141013_812.jpg"
+    },
+    {
+      "index": 33,
+      "timestamp": "2025-11-20T14:10:33.412618",
+      "gps": {
+        "latitude": 34.06816383333334,
+        "longitude": -118.444334,
+        "altitude": 134.2
+      },
+      "router_batch": {
+        "batch_id": 32,
+        "measurement_count": 250,
+        "file": "rx_router_data/20251120_141033_412_batch32.json"
+      },
+      "image": "images/20251120_141033_412.jpg"
+    },
+    {
+      "index": 34,
+      "timestamp": "2025-11-20T14:10:53.212701",
+      "gps": {
+        "latitude": 34.068223333333336,
+        "longitude": -118.444307,
+        "altitude": 126.4
+      },
+      "router_batch": {
+        "batch_id": 33,
+        "measurement_count": 250,
+        "file": "rx_router_data/20251120_141053_212_batch33.json"
+      },
+      "image": "images/20251120_141053_212.jpg"
+    },
+    {
+      "index": 35,
+      "timestamp": "2025-11-20T14:11:12.812798",
+      "gps": {
+        "latitude": 34.068255666666666,
+        "longitude": -118.4442375,
+        "altitude": 124.1
+      },
+      "router_batch": {
+        "batch_id": 34,
+        "measurement_count": 250,
+        "file": "rx_router_data/20251120_141112_812_batch34.json"
+      },
+      "image": "images/20251120_141112_812.jpg"
+    },
+    {
+      "index": 36,
+      "timestamp": "2025-11-20T14:11:32.412689",
+      "gps": {
+        "latitude": 34.068252,
+        "longitude": -118.44413316666666,
+        "altitude": 127.8
+      },
+      "router_batch": {
+        "batch_id": 35,
+        "measurement_count": 250,
+        "file": "rx_router_data/20251120_141132_412_batch35.json"
+      },
+      "image": "images/20251120_141132_412.jpg"
+    },
+    {
+      "index": 37,
+      "timestamp": "2025-11-20T14:11:52.012444",
+      "gps": {
+        "latitude": 34.068259833333336,
+        "longitude": -118.44409216666666,
+        "altitude": 123.7
+      },
+      "router_batch": {
+        "batch_id": 36,
+        "measurement_count": 250,
+        "file": "rx_router_data/20251120_141152_012_batch36.json"
+      },
+      "image": "images/20251120_141152_012.jpg"
+    },
+    {
+      "index": 38,
+      "timestamp": "2025-11-20T14:12:11.812844",
+      "gps": {
+        "latitude": 34.068223333333336,
+        "longitude": -118.4441545,
+        "altitude": 123.5
+      },
+      "router_batch": {
+        "batch_id": 37,
+        "measurement_count": 250,
+        "file": "rx_router_data/20251120_141211_812_batch37.json"
+      },
+      "image": "images/20251120_141211_812.jpg"
+    },
+    {
+      "index": 39,
+      "timestamp": "2025-11-20T14:12:32.512853",
+      "gps": {
+        "latitude": 34.06813416666667,
+        "longitude": -118.4442275,
+        "altitude": 136.1
+      },
+      "router_batch": {
+        "batch_id": 38,
+        "measurement_count": 250,
+        "file": "rx_router_data/20251120_141232_512_batch38.json"
+      },
+      "image": "images/20251120_141232_512.jpg"
+    },
+    {
+      "index": 40,
+      "timestamp": "2025-11-20T14:12:52.112998",
+      "gps": {
+        "latitude": 34.068069,
+        "longitude": -118.44421716666666,
+        "altitude": 153.5
+      },
+      "router_batch": {
+        "batch_id": 39,
+        "measurement_count": 250,
+        "file": "rx_router_data/20251120_141252_112_batch39.json"
+      },
+      "image": "images/20251120_141252_112.jpg"
+    },
+    {
+      "index": 41,
+      "timestamp": "2025-11-20T14:13:12.812788",
+      "gps": {
+        "latitude": 34.06806866666667,
+        "longitude": -118.444102,
+        "altitude": 164.8
+      },
+      "router_batch": {
+        "batch_id": 40,
+        "measurement_count": 250,
+        "file": "rx_router_data/20251120_141312_812_batch40.json"
+      },
+      "image": "images/20251120_141312_812.jpg"
+    },
+    {
+      "index": 42,
+      "timestamp": "2025-11-20T14:13:33.512790",
+      "gps": {
+        "latitude": 34.06803216666667,
+        "longitude": -118.44405166666667,
+        "altitude": 176.6
+      },
+      "router_batch": {
+        "batch_id": 41,
+        "measurement_count": 250,
+        "file": "rx_router_data/20251120_141333_512_batch41.json"
+      },
+      "image": "images/20251120_141333_512.jpg"
+    },
+    {
+      "index": 43,
+      "timestamp": "2025-11-20T14:13:53.212746",
+      "gps": {
+        "latitude": 34.067984333333335,
+        "longitude": -118.44400666666667,
+        "altitude": 188.0
+      },
+      "router_batch": {
+        "batch_id": 42,
+        "measurement_count": 250,
+        "file": "rx_router_data/20251120_141353_212_batch42.json"
+      },
+      "image": "images/20251120_141353_212.jpg"
+    },
+    {
+      "index": 44,
+      "timestamp": "2025-11-20T14:14:12.912811",
+      "gps": {
+        "latitude": 34.068017833333336,
+        "longitude": -118.44402933333333,
+        "altitude": 183.9
+      },
+      "router_batch": {
+        "batch_id": 43,
+        "measurement_count": 250,
+        "file": "rx_router_data/20251120_141412_912_batch43.json"
+      },
+      "image": "images/20251120_141412_912.jpg"
+    },
+    {
+      "index": 45,
+      "timestamp": "2025-11-20T14:14:32.512700",
+      "gps": {
+        "latitude": 34.068079833333336,
+        "longitude": -118.44403366666667,
+        "altitude": 178.3
+      },
+      "router_batch": {
+        "batch_id": 44,
+        "measurement_count": 250,
+        "file": "rx_router_data/20251120_141432_512_batch44.json"
+      },
+      "image": "images/20251120_141432_512.jpg"
+    },
+    {
+      "index": 46,
+      "timestamp": "2025-11-20T14:14:52.112754",
+      "gps": {
+        "latitude": 34.068086,
+        "longitude": -118.444043,
+        "altitude": 180.2
+      },
+      "router_batch": {
+        "batch_id": 45,
+        "measurement_count": 250,
+        "file": "rx_router_data/20251120_141452_112_batch45.json"
+      },
+      "image": "images/20251120_141452_112.jpg"
+    },
+    {
+      "index": 47,
+      "timestamp": "2025-11-20T14:15:11.812792",
+      "gps": {
+        "latitude": 34.06810216666667,
+        "longitude": -118.4439755,
+        "altitude": 185.9
+      },
+      "router_batch": {
+        "batch_id": 46,
+        "measurement_count": 250,
+        "file": "rx_router_data/20251120_141511_812_batch46.json"
+      },
+      "image": "images/20251120_141511_812.jpg"
+    },
+    {
+      "index": 48,
+      "timestamp": "2025-11-20T14:15:31.412555",
+      "gps": {
+        "latitude": 34.0681555,
+        "longitude": -118.443994,
+        "altitude": 182.1
+      },
+      "router_batch": {
+        "batch_id": 47,
+        "measurement_count": 250,
+        "file": "rx_router_data/20251120_141531_412_batch47.json"
+      },
+      "image": "images/20251120_141531_412.jpg"
+    },
+    {
+      "index": 49,
+      "timestamp": "2025-11-20T14:15:51.112946",
+      "gps": {
+        "latitude": 34.067948333333334,
+        "longitude": -118.443827,
+        "altitude": 221.2
+      },
+      "router_batch": {
+        "batch_id": 48,
+        "measurement_count": 250,
+        "file": "rx_router_data/20251120_141551_112_batch48.json"
+      },
+      "image": "images/20251120_141551_112.jpg"
+    },
+    {
+      "index": 50,
+      "timestamp": "2025-11-20T14:16:10.812786",
+      "gps": {
+        "latitude": 34.067878666666665,
+        "longitude": -118.44379316666667,
+        "altitude": 236.2
+      },
+      "router_batch": {
+        "batch_id": 49,
+        "measurement_count": 250,
+        "file": "rx_router_data/20251120_141610_812_batch49.json"
+      },
+      "image": "images/20251120_141610_812.jpg"
+    },
+    {
+      "index": 51,
+      "timestamp": "2025-11-20T14:16:30.412893",
+      "gps": {
+        "latitude": 34.06789066666666,
+        "longitude": -118.44370866666667,
+        "altitude": 244.3
+      },
+      "router_batch": {
+        "batch_id": 50,
+        "measurement_count": 250,
+        "file": "rx_router_data/20251120_141630_412_batch50.json"
+      },
+      "image": "images/20251120_141630_412.jpg"
+    },
+    {
+      "index": 52,
+      "timestamp": "2025-11-20T14:16:50.112806",
+      "gps": {
+        "latitude": 34.0679775,
+        "longitude": -118.44352383333333,
+        "altitude": 247.0
+      },
+      "router_batch": {
+        "batch_id": 51,
+        "measurement_count": 250,
+        "file": "rx_router_data/20251120_141650_112_batch51.json"
+      },
+      "image": "images/20251120_141650_112.jpg"
+    },
+    {
+      "index": 53,
+      "timestamp": "2025-11-20T14:17:10.012860",
+      "gps": {
+        "latitude": 34.067960666666664,
+        "longitude": -118.44378766666667,
+        "altitude": 236.0
+      },
+      "router_batch": {
+        "batch_id": 52,
+        "measurement_count": 250,
+        "file": "rx_router_data/20251120_141710_012_batch52.json"
+      },
+      "image": "images/20251120_141710_012.jpg"
+    },
+    {
+      "index": 54,
+      "timestamp": "2025-11-20T14:17:29.613028",
+      "gps": {
+        "latitude": 34.06810266666667,
+        "longitude": -118.4440905,
+        "altitude": 191.8
+      },
+      "router_batch": {
+        "batch_id": 53,
+        "measurement_count": 250,
+        "file": "rx_router_data/20251120_141729_613_batch53.json"
+      },
+      "image": "images/20251120_141729_613.jpg"
+    },
+    {
+      "index": 55,
+      "timestamp": "2025-11-20T14:17:49.412615",
+      "gps": {
+        "latitude": 34.06819483333334,
+        "longitude": -118.4440785,
+        "altitude": 160.2
+      },
+      "router_batch": {
+        "batch_id": 54,
+        "measurement_count": 250,
+        "file": "rx_router_data/20251120_141749_412_batch54.json"
+      },
+      "image": "images/20251120_141749_412.jpg"
+    },
+    {
+      "index": 56,
+      "timestamp": "2025-11-20T14:18:10.112792",
+      "gps": {
+        "latitude": 34.06826183333333,
+        "longitude": -118.4440405,
+        "altitude": 139.8
+      },
+      "router_batch": {
+        "batch_id": 55,
+        "measurement_count": 250,
+        "file": "rx_router_data/20251120_141810_112_batch55.json"
+      },
+      "image": "images/20251120_141810_112.jpg"
+    },
+    {
+      "index": 57,
+      "timestamp": "2025-11-20T14:18:29.712404",
+      "gps": {
+        "latitude": 34.068301,
+        "longitude": -118.44401616666667,
+        "altitude": 130.9
+      },
+      "router_batch": {
+        "batch_id": 56,
+        "measurement_count": 250,
+        "file": "rx_router_data/20251120_141829_712_batch56.json"
+      },
+      "image": "images/20251120_141829_712.jpg"
+    },
+    {
+      "index": 58,
+      "timestamp": "2025-11-20T14:18:49.413380",
+      "gps": {
+        "latitude": 34.06826516666667,
+        "longitude": -118.44411283333334,
+        "altitude": 128.7
+      },
+      "router_batch": {
+        "batch_id": 57,
+        "measurement_count": 250,
+        "file": "rx_router_data/20251120_141849_413_batch57.json"
+      },
+      "image": "images/20251120_141849_413.jpg"
+    },
+    {
+      "index": 59,
+      "timestamp": "2025-11-20T14:19:09.112786",
+      "gps": {
+        "latitude": 34.06827633333333,
+        "longitude": -118.44411816666667,
+        "altitude": 122.8
+      },
+      "router_batch": {
+        "batch_id": 58,
+        "measurement_count": 250,
+        "file": "rx_router_data/20251120_141909_112_batch58.json"
+      },
+      "image": "images/20251120_141909_112.jpg"
+    },
+    {
+      "index": 60,
+      "timestamp": "2025-11-20T14:19:29.812763",
+      "gps": {
+        "latitude": 34.068285,
+        "longitude": -118.44415633333334,
+        "altitude": 116.9
+      },
+      "router_batch": {
+        "batch_id": 59,
+        "measurement_count": 250,
+        "file": "rx_router_data/20251120_141929_812_batch59.json"
+      },
+      "image": "images/20251120_141929_812.jpg"
+    },
+    {
+      "index": 61,
+      "timestamp": "2025-11-20T14:19:49.512565",
+      "gps": {
+        "latitude": 34.06825516666667,
+        "longitude": -118.44417983333334,
+        "altitude": 115.4
+      },
+      "router_batch": {
+        "batch_id": 60,
+        "measurement_count": 250,
+        "file": "rx_router_data/20251120_141949_512_batch60.json"
+      },
+      "image": "images/20251120_141949_512.jpg"
+    },
+    {
+      "index": 62,
+      "timestamp": "2025-11-20T14:20:09.212768",
+      "gps": {
+        "latitude": 34.068271833333334,
+        "longitude": -118.444158,
+        "altitude": 113.2
+      },
+      "router_batch": {
+        "batch_id": 61,
+        "measurement_count": 250,
+        "file": "rx_router_data/20251120_142009_212_batch61.json"
+      },
+      "image": "images/20251120_142009_212.jpg"
+    },
+    {
+      "index": 63,
+      "timestamp": "2025-11-20T14:20:28.912738",
+      "gps": {
+        "latitude": 34.06826433333333,
+        "longitude": -118.44409166666667,
+        "altitude": 112.1
+      },
+      "router_batch": {
+        "batch_id": 62,
+        "measurement_count": 250,
+        "file": "rx_router_data/20251120_142028_912_batch62.json"
+      },
+      "image": "images/20251120_142028_912.jpg"
+    },
+    {
+      "index": 64,
+      "timestamp": "2025-11-20T14:20:48.712782",
+      "gps": {
+        "latitude": 34.06825516666667,
+        "longitude": -118.44411083333334,
+        "altitude": 108.3
+      },
+      "router_batch": {
+        "batch_id": 63,
+        "measurement_count": 250,
+        "file": "rx_router_data/20251120_142048_712_batch63.json"
+      },
+      "image": "images/20251120_142048_712.jpg"
+    },
+    {
+      "index": 65,
+      "timestamp": "2025-11-20T14:21:08.412761",
+      "gps": {
+        "latitude": 34.068287833333336,
+        "longitude": -118.444096,
+        "altitude": 105.8
+      },
+      "router_batch": {
+        "batch_id": 64,
+        "measurement_count": 250,
+        "file": "rx_router_data/20251120_142108_412_batch64.json"
+      },
+      "image": "images/20251120_142108_412.jpg"
+    },
+    {
+      "index": 66,
+      "timestamp": "2025-11-20T14:21:28.012788",
+      "gps": {
+        "latitude": 34.068207,
+        "longitude": -118.44431616666667,
+        "altitude": 120.5
+      },
+      "router_batch": {
+        "batch_id": 65,
+        "measurement_count": 250,
+        "file": "rx_router_data/20251120_142128_012_batch65.json"
+      },
+      "image": "images/20251120_142128_012.jpg"
+    },
+    {
+      "index": 67,
+      "timestamp": "2025-11-20T14:21:47.612573",
+      "gps": {
+        "latitude": 34.068239,
+        "longitude": -118.44426733333333,
+        "altitude": 125.9
+      },
+      "router_batch": {
+        "batch_id": 66,
+        "measurement_count": 250,
+        "file": "rx_router_data/20251120_142147_612_batch66.json"
+      },
+      "image": "images/20251120_142147_612.jpg"
+    },
+    {
+      "index": 68,
+      "timestamp": "2025-11-20T14:22:08.212521",
+      "gps": {
+        "latitude": 34.0682785,
+        "longitude": -118.444223,
+        "altitude": 130.5
+      },
+      "router_batch": {
+        "batch_id": 67,
+        "measurement_count": 250,
+        "file": "rx_router_data/20251120_142208_212_batch67.json"
+      },
+      "image": "images/20251120_142208_212.jpg"
+    },
+    {
+      "index": 69,
+      "timestamp": "2025-11-20T14:22:27.912775",
+      "gps": {
+        "latitude": 34.068327833333335,
+        "longitude": -118.44413766666666,
+        "altitude": 133.2
+      },
+      "router_batch": {
+        "batch_id": 68,
+        "measurement_count": 250,
+        "file": "rx_router_data/20251120_142227_912_batch68.json"
+      },
+      "image": "images/20251120_142227_912.jpg"
+    },
+    {
+      "index": 70,
+      "timestamp": "2025-11-20T14:22:47.512894",
+      "gps": {
+        "latitude": 34.068301,
+        "longitude": -118.44419066666667,
+        "altitude": 138.9
+      },
+      "router_batch": {
+        "batch_id": 69,
+        "measurement_count": 250,
+        "file": "rx_router_data/20251120_142247_512_batch69.json"
+      },
+      "image": "images/20251120_142247_512.jpg"
+    },
+    {
+      "index": 71,
+      "timestamp": "2025-11-20T14:23:07.212761",
+      "gps": {
+        "latitude": 34.06827633333333,
+        "longitude": -118.44421683333333,
+        "altitude": 141.8
+      },
+      "router_batch": {
+        "batch_id": 70,
+        "measurement_count": 250,
+        "file": "rx_router_data/20251120_142307_212_batch70.json"
+      },
+      "image": "images/20251120_142307_212.jpg"
+    },
+    {
+      "index": 72,
+      "timestamp": "2025-11-20T14:23:26.712757",
+      "gps": {
+        "latitude": 34.06827033333333,
+        "longitude": -118.44422733333333,
+        "altitude": 142.5
+      },
+      "router_batch": {
+        "batch_id": 71,
+        "measurement_count": 250,
+        "file": "rx_router_data/20251120_142326_712_batch71.json"
+      },
+      "image": "images/20251120_142326_712.jpg"
+    },
+    {
+      "index": 73,
+      "timestamp": "2025-11-20T14:23:47.412444",
+      "gps": {
+        "latitude": 34.068275666666665,
+        "longitude": -118.44420466666666,
+        "altitude": 140.8
+      },
+      "router_batch": {
+        "batch_id": 72,
+        "measurement_count": 250,
+        "file": "rx_router_data/20251120_142347_412_batch72.json"
+      },
+      "image": "images/20251120_142347_412.jpg"
+    },
+    {
+      "index": 74,
+      "timestamp": "2025-11-20T14:24:08.012446",
+      "gps": {
+        "latitude": 34.06825033333333,
+        "longitude": -118.44416333333334,
+        "altitude": 138.8
+      },
+      "router_batch": {
+        "batch_id": 73,
+        "measurement_count": 250,
+        "file": "rx_router_data/20251120_142408_012_batch73.json"
+      },
+      "image": "images/20251120_142408_012.jpg"
+    },
+    {
+      "index": 75,
+      "timestamp": "2025-11-20T14:24:28.912774",
+      "gps": {
+        "latitude": 34.06821883333333,
+        "longitude": -118.44420933333333,
+        "altitude": 137.7
+      },
+      "router_batch": {
+        "batch_id": 74,
+        "measurement_count": 250,
+        "file": "rx_router_data/20251120_142428_912_batch74.json"
+      },
+      "image": "images/20251120_142428_912.jpg"
+    },
+    {
+      "index": 76,
+      "timestamp": "2025-11-20T14:24:48.412502",
+      "gps": {
+        "latitude": 34.0681915,
+        "longitude": -118.44422583333333,
+        "altitude": 137.2
+      },
+      "router_batch": {
+        "batch_id": 75,
+        "measurement_count": 250,
+        "file": "rx_router_data/20251120_142448_412_batch75.json"
+      },
+      "image": "images/20251120_142448_412.jpg"
+    },
+    {
+      "index": 77,
+      "timestamp": "2025-11-20T14:25:08.112919",
+      "gps": {
+        "latitude": 34.068257333333335,
+        "longitude": -118.44410783333333,
+        "altitude": 131.6
+      },
+      "router_batch": {
+        "batch_id": 76,
+        "measurement_count": 250,
+        "file": "rx_router_data/20251120_142508_112_batch76.json"
+      },
+      "image": "images/20251120_142508_112.jpg"
+    },
+    {
+      "index": 78,
+      "timestamp": "2025-11-20T14:25:28.812774",
+      "gps": {
+        "latitude": 34.068355333333336,
+        "longitude": -118.443987,
+        "altitude": 123.3
+      },
+      "router_batch": {
+        "batch_id": 77,
+        "measurement_count": 250,
+        "file": "rx_router_data/20251120_142528_812_batch77.json"
+      },
+      "image": "images/20251120_142528_812.jpg"
+    },
+    {
+      "index": 79,
+      "timestamp": "2025-11-20T14:25:48.613398",
+      "gps": {
+        "latitude": 34.068406833333334,
+        "longitude": -118.4438775,
+        "altitude": 118.4
+      },
+      "router_batch": {
+        "batch_id": 78,
+        "measurement_count": 250,
+        "file": "rx_router_data/20251120_142548_613_batch78.json"
+      },
+      "image": "images/20251120_142548_613.jpg"
+    },
+    {
+      "index": 80,
+      "timestamp": "2025-11-20T14:26:08.312801",
+      "gps": {
+        "latitude": 34.06838333333334,
+        "longitude": -118.44392816666667,
+        "altitude": 122.0
+      },
+      "router_batch": {
+        "batch_id": 79,
+        "measurement_count": 250,
+        "file": "rx_router_data/20251120_142608_312_batch79.json"
+      },
+      "image": "images/20251120_142608_312.jpg"
+    },
+    {
+      "index": 81,
+      "timestamp": "2025-11-20T14:26:28.012943",
+      "gps": {
+        "latitude": 34.06836966666667,
+        "longitude": -118.44397516666666,
+        "altitude": 123.9
+      },
+      "router_batch": {
+        "batch_id": 80,
+        "measurement_count": 250,
+        "file": "rx_router_data/20251120_142628_012_batch80.json"
+      },
+      "image": "images/20251120_142628_012.jpg"
+    },
+    {
+      "index": 82,
+      "timestamp": "2025-11-20T14:26:47.812788",
+      "gps": {
+        "latitude": 34.06834116666667,
+        "longitude": -118.4440455,
+        "altitude": 125.2
+      },
+      "router_batch": {
+        "batch_id": 81,
+        "measurement_count": 250,
+        "file": "rx_router_data/20251120_142647_812_batch81.json"
+      },
+      "image": "images/20251120_142647_812.jpg"
+    },
+    {
+      "index": 83,
+      "timestamp": "2025-11-20T14:27:07.412680",
+      "gps": {
+        "latitude": 34.0682925,
+        "longitude": -118.444153,
+        "altitude": 126.9
+      },
+      "router_batch": {
+        "batch_id": 82,
+        "measurement_count": 250,
+        "file": "rx_router_data/20251120_142707_412_batch82.json"
+      },
+      "image": "images/20251120_142707_412.jpg"
+    },
+    {
+      "index": 84,
+      "timestamp": "2025-11-20T14:27:28.112884",
+      "gps": {
+        "latitude": 34.06826783333333,
+        "longitude": -118.44419333333333,
+        "altitude": 127.2
+      },
+      "router_batch": {
+        "batch_id": 83,
+        "measurement_count": 250,
+        "file": "rx_router_data/20251120_142728_112_batch83.json"
+      },
+      "image": "images/20251120_142728_112.jpg"
+    },
+    {
+      "index": 85,
+      "timestamp": "2025-11-20T14:27:47.812830",
+      "gps": {
+        "latitude": 34.068268,
+        "longitude": -118.44411516666666,
+        "altitude": 128.1
+      },
+      "router_batch": {
+        "batch_id": 84,
+        "measurement_count": 250,
+        "file": "rx_router_data/20251120_142747_812_batch84.json"
+      },
+      "image": "images/20251120_142747_812.jpg"
+    },
+    {
+      "index": 86,
+      "timestamp": "2025-11-20T14:28:07.412783",
+      "gps": {
+        "latitude": 34.068252,
+        "longitude": -118.44410566666667,
+        "altitude": 131.4
+      },
+      "router_batch": {
+        "batch_id": 85,
+        "measurement_count": 250,
+        "file": "rx_router_data/20251120_142807_412_batch85.json"
+      },
+      "image": "images/20251120_142807_412.jpg"
+    },
+    {
+      "index": 87,
+      "timestamp": "2025-11-20T14:28:27.112768",
+      "gps": {
+        "latitude": 34.0682245,
+        "longitude": -118.44418,
+        "altitude": 135.4
+      },
+      "router_batch": {
+        "batch_id": 86,
+        "measurement_count": 250,
+        "file": "rx_router_data/20251120_142827_112_batch86.json"
+      },
+      "image": "images/20251120_142827_112.jpg"
+    },
+    {
+      "index": 88,
+      "timestamp": "2025-11-20T14:28:46.712748",
+      "gps": {
+        "latitude": 34.068256833333336,
+        "longitude": -118.44409966666667,
+        "altitude": 132.6
+      },
+      "router_batch": {
+        "batch_id": 87,
+        "measurement_count": 250,
+        "file": "rx_router_data/20251120_142846_712_batch87.json"
+      },
+      "image": "images/20251120_142846_712.jpg"
+    },
+    {
+      "index": 89,
+      "timestamp": "2025-11-20T14:29:06.412561",
+      "gps": {
+        "latitude": 34.0682685,
+        "longitude": -118.44412516666667,
+        "altitude": 131.5
+      },
+      "router_batch": {
+        "batch_id": 88,
+        "measurement_count": 250,
+        "file": "rx_router_data/20251120_142906_412_batch88.json"
+      },
+      "image": "images/20251120_142906_412.jpg"
+    },
+    {
+      "index": 90,
+      "timestamp": "2025-11-20T14:29:26.113051",
+      "gps": {
+        "latitude": 34.068251833333335,
+        "longitude": -118.44416183333334,
+        "altitude": 136.2
+      },
+      "router_batch": {
+        "batch_id": 89,
+        "measurement_count": 250,
+        "file": "rx_router_data/20251120_142926_113_batch89.json"
+      },
+      "image": "images/20251120_142926_113.jpg"
+    },
+    {
+      "index": 91,
+      "timestamp": "2025-11-20T14:29:45.712621",
+      "gps": {
+        "latitude": 34.06819483333334,
+        "longitude": -118.444271,
+        "altitude": 142.9
+      },
+      "router_batch": {
+        "batch_id": 90,
+        "measurement_count": 250,
+        "file": "rx_router_data/20251120_142945_712_batch90.json"
+      },
+      "image": "images/20251120_142945_712.jpg"
+    },
+    {
+      "index": 92,
+      "timestamp": "2025-11-20T14:30:05.312827",
+      "gps": {
+        "latitude": 34.068147333333336,
+        "longitude": -118.4443305,
+        "altitude": 151.3
+      },
+      "router_batch": {
+        "batch_id": 91,
+        "measurement_count": 250,
+        "file": "rx_router_data/20251120_143005_312_batch91.json"
+      },
+      "image": "images/20251120_143005_312.jpg"
+    },
+    {
+      "index": 93,
+      "timestamp": "2025-11-20T14:30:25.012709",
+      "gps": {
+        "latitude": 34.0680615,
+        "longitude": -118.4444395,
+        "altitude": 162.6
+      },
+      "router_batch": {
+        "batch_id": 92,
+        "measurement_count": 250,
+        "file": "rx_router_data/20251120_143025_012_batch92.json"
+      },
+      "image": "images/20251120_143025_012.jpg"
+    },
+    {
+      "index": 94,
+      "timestamp": "2025-11-20T14:30:44.712869",
+      "gps": {
+        "latitude": 34.06802533333333,
+        "longitude": -118.44449566666667,
+        "altitude": 166.7
+      },
+      "router_batch": {
+        "batch_id": 93,
+        "measurement_count": 250,
+        "file": "rx_router_data/20251120_143044_712_batch93.json"
+      },
+      "image": "images/20251120_143044_712.jpg"
+    },
+    {
+      "index": 95,
+      "timestamp": "2025-11-20T14:31:04.312803",
+      "gps": {
+        "latitude": 34.06802066666667,
+        "longitude": -118.44457716666666,
+        "altitude": 166.7
+      },
+      "router_batch": {
+        "batch_id": 94,
+        "measurement_count": 250,
+        "file": "rx_router_data/20251120_143104_312_batch94.json"
+      },
+      "image": "images/20251120_143104_312.jpg"
+    },
+    {
+      "index": 96,
+      "timestamp": "2025-11-20T14:31:24.012804",
+      "gps": {
+        "latitude": 34.0681205,
+        "longitude": -118.444322,
+        "altitude": 150.6
+      },
+      "router_batch": {
+        "batch_id": 95,
+        "measurement_count": 250,
+        "file": "rx_router_data/20251120_143124_012_batch95.json"
+      },
+      "image": "images/20251120_143124_012.jpg"
+    },
+    {
+      "index": 97,
+      "timestamp": "2025-11-20T14:31:43.713119",
+      "gps": {
+        "latitude": 34.068230166666666,
+        "longitude": -118.4440575,
+        "altitude": 135.1
+      },
+      "router_batch": {
+        "batch_id": 96,
+        "measurement_count": 250,
+        "file": "rx_router_data/20251120_143143_713_batch96.json"
+      },
+      "image": "images/20251120_143143_713.jpg"
+    },
+    {
+      "index": 98,
+      "timestamp": "2025-11-20T14:32:04.312935",
+      "gps": {
+        "latitude": 34.0682895,
+        "longitude": -118.44394,
+        "altitude": 126.6
+      },
+      "router_batch": {
+        "batch_id": 97,
+        "measurement_count": 250,
+        "file": "rx_router_data/20251120_143204_312_batch97.json"
+      },
+      "image": "images/20251120_143204_312.jpg"
+    },
+    {
+      "index": 99,
+      "timestamp": "2025-11-20T14:32:24.012926",
+      "gps": {
+        "latitude": 34.0683205,
+        "longitude": -118.44378266666666,
+        "altitude": 122.7
+      },
+      "router_batch": {
+        "batch_id": 98,
+        "measurement_count": 250,
+        "file": "rx_router_data/20251120_143224_012_batch98.json"
+      },
+      "image": "images/20251120_143224_012.jpg"
+    },
+    {
+      "index": 100,
+      "timestamp": "2025-11-20T14:32:43.712867",
+      "gps": {
+        "latitude": 34.06840433333333,
+        "longitude": -118.443524,
+        "altitude": 114.2
+      },
+      "router_batch": {
+        "batch_id": 99,
+        "measurement_count": 250,
+        "file": "rx_router_data/20251120_143243_712_batch99.json"
+      },
+      "image": "images/20251120_143243_712.jpg"
+    },
+    {
+      "index": 101,
+      "timestamp": "2025-11-20T14:33:03.312760",
+      "gps": {
+        "latitude": 34.0685,
+        "longitude": -118.443218,
+        "altitude": 104.9
+      },
+      "router_batch": {
+        "batch_id": 100,
+        "measurement_count": 250,
+        "file": "rx_router_data/20251120_143303_312_batch100.json"
+      },
+      "image": "images/20251120_143303_312.jpg"
+    },
+    {
+      "index": 102,
+      "timestamp": "2025-11-20T14:33:23.012637",
+      "gps": {
+        "latitude": 34.068554666666664,
+        "longitude": -118.44308033333333,
+        "altitude": 94.7
+      },
+      "router_batch": {
+        "batch_id": 101,
+        "measurement_count": 250,
+        "file": "rx_router_data/20251120_143323_012_batch101.json"
+      },
+      "image": "images/20251120_143323_012.jpg"
+    },
+    {
+      "index": 103,
+      "timestamp": "2025-11-20T14:33:42.612781",
+      "gps": {
+        "latitude": 34.06860616666667,
+        "longitude": -118.44296366666667,
+        "altitude": 84.8
+      },
+      "router_batch": {
+        "batch_id": 102,
+        "measurement_count": 250,
+        "file": "rx_router_data/20251120_143342_612_batch102.json"
+      },
+      "image": "images/20251120_143342_612.jpg"
+    },
+    {
+      "index": 104,
+      "timestamp": "2025-11-20T14:34:02.412776",
+      "gps": {
+        "latitude": 34.068645833333335,
+        "longitude": -118.44292,
+        "altitude": 79.0
+      },
+      "router_batch": {
+        "batch_id": 103,
+        "measurement_count": 250,
+        "file": "rx_router_data/20251120_143402_412_batch103.json"
+      },
+      "image": "images/20251120_143402_412.jpg"
+    },
+    {
+      "index": 105,
+      "timestamp": "2025-11-20T14:34:22.012545",
+      "gps": {
+        "latitude": 34.0685335,
+        "longitude": -118.44313283333334,
+        "altitude": 96.6
+      },
+      "router_batch": {
+        "batch_id": 104,
+        "measurement_count": 250,
+        "file": "rx_router_data/20251120_143422_012_batch104.json"
+      },
+      "image": "images/20251120_143422_012.jpg"
+    },
+    {
+      "index": 106,
+      "timestamp": "2025-11-20T14:34:41.712852",
+      "gps": {
+        "latitude": 34.06838166666667,
+        "longitude": -118.44359516666667,
+        "altitude": 123.0
+      },
+      "router_batch": {
+        "batch_id": 105,
+        "measurement_count": 250,
+        "file": "rx_router_data/20251120_143441_712_batch105.json"
+      },
+      "image": "images/20251120_143441_712.jpg"
+    },
+    {
+      "index": 107,
+      "timestamp": "2025-11-20T14:35:01.312920",
+      "gps": {
+        "latitude": 34.0682965,
+        "longitude": -118.44390283333334,
+        "altitude": 137.4
+      },
+      "router_batch": {
+        "batch_id": 106,
+        "measurement_count": 250,
+        "file": "rx_router_data/20251120_143501_312_batch106.json"
+      },
+      "image": "images/20251120_143501_312.jpg"
+    },
+    {
+      "index": 108,
+      "timestamp": "2025-11-20T14:35:20.912845",
+      "gps": {
+        "latitude": 34.068250166666665,
+        "longitude": -118.444049,
+        "altitude": 142.9
+      },
+      "router_batch": {
+        "batch_id": 107,
+        "measurement_count": 250,
+        "file": "rx_router_data/20251120_143520_912_batch107.json"
+      },
+      "image": "images/20251120_143520_912.jpg"
+    },
+    {
+      "index": 109,
+      "timestamp": "2025-11-20T14:35:40.612910",
+      "gps": {
+        "latitude": 34.0682155,
+        "longitude": -118.4441835,
+        "altitude": 143.9
+      },
+      "router_batch": {
+        "batch_id": 108,
+        "measurement_count": 250,
+        "file": "rx_router_data/20251120_143540_612_batch108.json"
+      },
+      "image": "images/20251120_143540_612.jpg"
+    },
+    {
+      "index": 110,
+      "timestamp": "2025-11-20T14:36:00.212791",
+      "gps": {
+        "latitude": 34.068227666666665,
+        "longitude": -118.4442475,
+        "altitude": 141.9
+      },
+      "router_batch": {
+        "batch_id": 109,
+        "measurement_count": 250,
+        "file": "rx_router_data/20251120_143600_212_batch109.json"
+      },
+      "image": "images/20251120_143600_212.jpg"
+    },
+    {
+      "index": 111,
+      "timestamp": "2025-11-20T14:36:19.812786",
+      "gps": {
+        "latitude": 34.0682245,
+        "longitude": -118.44418833333333,
+        "altitude": 138.4
+      },
+      "router_batch": {
+        "batch_id": 110,
+        "measurement_count": 250,
+        "file": "rx_router_data/20251120_143619_812_batch110.json"
+      },
+      "image": "images/20251120_143619_812.jpg"
+    },
+    {
+      "index": 112,
+      "timestamp": "2025-11-20T14:36:40.412943",
+      "gps": {
+        "latitude": 34.068265833333335,
+        "longitude": -118.44415183333334,
+        "altitude": 130.1
+      },
+      "router_batch": {
+        "batch_id": 111,
+        "measurement_count": 250,
+        "file": "rx_router_data/20251120_143640_412_batch111.json"
+      },
+      "image": "images/20251120_143640_412.jpg"
+    },
+    {
+      "index": 113,
+      "timestamp": "2025-11-20T14:37:00.012467",
+      "gps": {
+        "latitude": 34.068292166666666,
+        "longitude": -118.44400816666666,
+        "altitude": 121.4
+      },
+      "router_batch": {
+        "batch_id": 112,
+        "measurement_count": 250,
+        "file": "rx_router_data/20251120_143700_012_batch112.json"
+      },
+      "image": "images/20251120_143700_012.jpg"
+    },
+    {
+      "index": 114,
+      "timestamp": "2025-11-20T14:37:19.713047",
+      "gps": {
+        "latitude": 34.06830016666667,
+        "longitude": -118.44403,
+        "altitude": 122.0
+      },
+      "router_batch": {
+        "batch_id": 113,
+        "measurement_count": 250,
+        "file": "rx_router_data/20251120_143719_713_batch113.json"
+      },
+      "image": "images/20251120_143719_713.jpg"
+    },
+    {
+      "index": 115,
+      "timestamp": "2025-11-20T14:37:39.412779",
+      "gps": {
+        "latitude": 34.06827466666667,
+        "longitude": -118.444133,
+        "altitude": 126.5
+      },
+      "router_batch": {
+        "batch_id": 114,
+        "measurement_count": 250,
+        "file": "rx_router_data/20251120_143739_412_batch114.json"
+      },
+      "image": "images/20251120_143739_412.jpg"
+    },
+    {
+      "index": 116,
+      "timestamp": "2025-11-20T14:37:59.012831",
+      "gps": {
+        "latitude": 34.068262,
+        "longitude": -118.444183,
+        "altitude": 128.7
+      },
+      "router_batch": {
+        "batch_id": 115,
+        "measurement_count": 250,
+        "file": "rx_router_data/20251120_143759_012_batch115.json"
+      },
+      "image": "images/20251120_143759_012.jpg"
+    },
+    {
+      "index": 117,
+      "timestamp": "2025-11-20T14:38:18.612725",
+      "gps": {
+        "latitude": 34.06825666666667,
+        "longitude": -118.444191,
+        "altitude": 131.6
+      },
+      "router_batch": {
+        "batch_id": 116,
+        "measurement_count": 250,
+        "file": "rx_router_data/20251120_143818_612_batch116.json"
+      },
+      "image": "images/20251120_143818_612.jpg"
+    },
+    {
+      "index": 118,
+      "timestamp": "2025-11-20T14:38:38.212610",
+      "gps": {
+        "latitude": 34.068223833333334,
+        "longitude": -118.44424816666667,
+        "altitude": 140.4
+      },
+      "router_batch": {
+        "batch_id": 117,
+        "measurement_count": 250,
+        "file": "rx_router_data/20251120_143838_212_batch117.json"
+      },
+      "image": "images/20251120_143838_212.jpg"
+    },
+    {
+      "index": 119,
+      "timestamp": "2025-11-20T14:38:58.813358",
+      "gps": {
+        "latitude": 34.0682145,
+        "longitude": -118.44422966666667,
+        "altitude": 143.2
+      },
+      "router_batch": {
+        "batch_id": 118,
+        "measurement_count": 250,
+        "file": "rx_router_data/20251120_143858_813_batch118.json"
+      },
+      "image": "images/20251120_143858_813.jpg"
+    },
+    {
+      "index": 120,
+      "timestamp": "2025-11-20T14:39:18.312843",
+      "gps": {
+        "latitude": 34.06820783333333,
+        "longitude": -118.44425333333334,
+        "altitude": 142.8
+      },
+      "router_batch": {
+        "batch_id": 119,
+        "measurement_count": 250,
+        "file": "rx_router_data/20251120_143918_312_batch119.json"
+      },
+      "image": "images/20251120_143918_312.jpg"
+    },
+    {
+      "index": 121,
+      "timestamp": "2025-11-20T14:39:37.912788",
+      "gps": {
+        "latitude": 34.06821133333333,
+        "longitude": -118.44428166666667,
+        "altitude": 141.8
+      },
+      "router_batch": {
+        "batch_id": 120,
+        "measurement_count": 250,
+        "file": "rx_router_data/20251120_143937_912_batch120.json"
+      },
+      "image": "images/20251120_143937_912.jpg"
+    }
+  ],
+  "end_time": "2025-11-20T14:39:42.471675",
+  "total_samples": 121
+}
