@@ -37,7 +37,7 @@ def generate_launch_description():
                 'mac_address': '\\xf4\\x1e\\x57\\x64\\x92\\xae',
                 'remote_file': '/tmp/csi_measurements.txt',
                 'remote_script': '/scripts/collect_csi.sh',
-                'measurements_per_batch': 5,
+                'measurements_per_batch': 100,
                 'batch_interval': 1.0,
                 'connection_timeout': 10,
                 'discrete_mode': discrete_mode,

@@ -202,7 +202,7 @@ class RouterBatch:
             phase_radians = phase_range[phase_data.astype(int)]
 
             # Create complex CSI from phase
-            H = magnitude_data * np.exp(1j * phase_radians)
+            H = np.exp(1j * phase_radians)
             H = H[:, valid_antennas]
             csi_processed_data = process_csi_data(H)
             averaged_csi_data = np.mean(csi_processed_data, axis=0)
