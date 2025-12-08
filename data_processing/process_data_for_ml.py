@@ -79,14 +79,41 @@ def process_data_path(data_path, dataset_name=None):
             all_phases.append(phase_data[sample_idx, :])
             all_dataset_names.append(dataset_name)
     
-    # Create DataFrame
-    df = pd.DataFrame({
-        'H': all_H,
-        'array_response': all_array_responses,
-        'magnitude': all_magnitudes,
-        'phase': all_phases,
-        'dataset_name': all_dataset_names
-    })
+    # Create DataFrame with expanded array columns
+    # First, convert lists of arrays to numpy arrays for easier manipulation
+    H_array = np.array(all_H)  # Shape: (num_samples, num_antennas)
+    array_response_array = np.array(all_array_responses)  # Shape: (num_samples, num_angles)
+    magnitude_array = np.array(all_magnitudes)  # Shape: (num_samples, num_antennas)
+    phase_array = np.array(all_phases)  # Shape: (num_samples, num_antennas)
+    
+    # Create a dictionary to hold all columns
+    df_dict = {}
+    
+    # Add dataset name
+    df_dict['dataset_name'] = all_dataset_names
+    
+    # Expand H (complex values) into real and imaginary parts for each antenna
+    num_antennas_H = H_array.shape[1]
+    for i in range(num_antennas_H):
+        df_dict[f'H_real_{i}'] = H_array[:, i].real
+        df_dict[f'H_imag_{i}'] = H_array[:, i].imag
+    
+    # Expand array_response into separate columns
+    num_angles = array_response_array.shape[1]
+    for i in range(num_angles):
+        df_dict[f'array_response_{i}'] = array_response_array[:, i]
+    
+    # Expand magnitude into separate columns
+    num_antennas_mag = magnitude_array.shape[1]
+    for i in range(num_antennas_mag):
+        df_dict[f'magnitude_{i}'] = magnitude_array[:, i]
+    
+    # Expand phase into separate columns
+    num_antennas_phase = phase_array.shape[1]
+    for i in range(num_antennas_phase):
+        df_dict[f'phase_{i}'] = phase_array[:, i]
+    
+    df = pd.DataFrame(df_dict)
     
     return df
 
