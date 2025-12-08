@@ -224,11 +224,14 @@ class RouterBatch:
             Numpy array of shape (num_measurements, 32) containing phase values
         """
         phase_data = []
+        phase_range = np.linspace(0, 2*np.pi, 1024)
         for measurement in self.measurements:
             phases = measurement.get_phase_data()
             if phases and len(phases) == 32:
                 phase_data.append(phases)
-        return np.array(phase_data) if phase_data else np.array([])
+        phase_data = np.array(phase_data)
+        phase_data = phase_range[phase_data.astype(int)]
+        return phase_data
     
     def get_all_magnitude_data(self) -> np.ndarray:
         """Get magnitude data from all measurements as a numpy array.
@@ -348,8 +351,10 @@ class SessionData:
     
     def load_all_router_batches(self) -> None:
         """Load all router batch data for all data points."""
+        self.router_batches = []
         for data_point in self.data_points:
-            data_point.load_router_batch(self.session_dir)
+            self.router_batches.append(data_point.load_router_batch(self.session_dir))
+        return self.router_batches
     
     def get_data_point(self, index: int) -> Optional[DataPoint]:
         """Get a data point by index."""
