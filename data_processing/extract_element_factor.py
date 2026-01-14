@@ -37,13 +37,11 @@ theta_range = np.deg2rad([-95, 95])
 session = SessionData.from_directory(session_dir)
 session.load_all_router_batches()
 
-channel_data = session.get_csi_data(averaged=False)
+channel_data = session.get_csi_data(averaged=True)
 channel_data_avg = session.get_csi_data(averaged=True)
-
 
 theta_peaks, peak_values = extract_peak_theta(channel_data)
 theta_peaks_avg, peak_values_avg = extract_peak_theta(channel_data_avg)
-
 
 plt.figure()
 plt.plot(peak_values)

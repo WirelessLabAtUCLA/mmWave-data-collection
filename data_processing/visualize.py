@@ -257,7 +257,7 @@ def plot_csi_phase_data(session: SessionData, save_path: Path = None, averaged: 
         session: SessionData object
         save_path: Optional path to save the figure
     """
-    fig, axes = plt.subplots(4, 4, figsize=(16, 12))
+    fig, axes = plt.subplots(4, 4, figsize=(18, 8))
     axes = axes.flatten()
     channel_data = session.get_csi_data(averaged=averaged)
     phase_data = np.angle(channel_data, True)
