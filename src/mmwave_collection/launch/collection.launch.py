@@ -17,10 +17,19 @@ def generate_launch_description():
         description='Enable discrete data collection mode (trigger-based)'
     )
     
+    # Declare launch argument for collection mode
+    collection_mode_arg = DeclareLaunchArgument(
+        'collection_mode',
+        default_value='csi',
+        description='Collection mode: csi (AoA only), ftm (ToF only), or both (AoA+ToF)'
+    )
+    
     discrete_mode = LaunchConfiguration('discrete_mode')
+    collection_mode = LaunchConfiguration('collection_mode')
     
     return LaunchDescription([
         discrete_mode_arg,
+        collection_mode_arg,
         
         # RX Router node
         Node(
@@ -41,6 +50,7 @@ def generate_launch_description():
                 'batch_interval': 1.0,
                 'connection_timeout': 10,
                 'discrete_mode': discrete_mode,
+                'collection_mode': collection_mode,
             }]
         ),
         

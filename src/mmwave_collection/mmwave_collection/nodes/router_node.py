@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-"""Router node - SSH to router and collect CSI data in batches"""
-from mmwave_collection.utils.router_utils import prepare_collection_script
+"""Router node - SSH to router and collect CSI/FTM data in batches"""
+from mmwave_collection.utils.router_utils import prepare_collection_script, prepare_ftm_collection_script
 import rclpy
 from rclpy.node import Node
 from std_msgs.msg import String, Empty
@@ -30,6 +30,7 @@ class RouterNode(Node):
         self.declare_parameter('batch_interval', 1.0)  # Seconds between batch collections
         self.declare_parameter('connection_timeout', 10)
         self.declare_parameter('discrete_mode', False)  # New: discrete vs continuous
+        self.declare_parameter('collection_mode', 'csi')  # 'csi', 'ftm', or 'both'
         
         # Get parameters
         self.router_name = self.get_parameter('router_name').value
@@ -45,6 +46,17 @@ class RouterNode(Node):
         self.batch_interval = self.get_parameter('batch_interval').value
         self.connection_timeout = self.get_parameter('connection_timeout').value
         self.discrete_mode = self.get_parameter('discrete_mode').value
+        self.collection_mode = self.get_parameter('collection_mode').value
+        
+        # Validate collection mode
+        if self.collection_mode not in ['csi', 'ftm', 'both']:
+            self.get_logger().error(f"Invalid collection_mode: {self.collection_mode}. Must be 'csi', 'ftm', or 'both'")
+            self.collection_mode = 'csi'
+        
+        # Setup FTM parameters if needed
+        if self.collection_mode in ['ftm', 'both']:
+            self.remote_ftm_file = '/tmp/ftm_measurements.txt'
+            self.remote_ftm_script = '/scripts/collect_ftm.sh'
         
         # Publisher
         topic_name = f'/{self.router_name}/data'
@@ -59,26 +71,40 @@ class RouterNode(Node):
         # SSH client
         self.ssh_client = None
         self.batch_count = 0
+        self.ftm_batch_count = 0
         
         # Connect and upload script
         if self.connect_ssh():
-            if self.upload_collection_script():
+            scripts_uploaded = True
+            
+            # Upload CSI script if needed
+            if self.collection_mode in ['csi', 'both']:
+                if not self.upload_collection_script('csi'):
+                    self.get_logger().error('Failed to upload CSI collection script')
+                    scripts_uploaded = False
+            
+            # Upload FTM script if needed
+            if self.collection_mode in ['ftm', 'both']:
+                if not self.upload_collection_script('ftm'):
+                    self.get_logger().error('Failed to upload FTM collection script')
+                    scripts_uploaded = False
+            
+            if scripts_uploaded:
                 mode_str = "discrete" if self.discrete_mode else "continuous"
+                collection_str = "CSI+FTM" if self.collection_mode == 'both' else self.collection_mode.upper()
                 
                 # Start batch collection timer only in continuous mode
                 if not self.discrete_mode:
                     self.timer = self.create_timer(self.batch_interval, self.collect_batch)
                     self.get_logger().info(
-                        f'{self.router_name} started in {mode_str} mode: {self.measurements_per_batch} measurements '
+                        f'{self.router_name} started in {mode_str} mode ({collection_str}): {self.measurements_per_batch} measurements '
                         f'every {self.batch_interval}s'
                     )
                 else:
                     self.get_logger().info(
-                        f'{self.router_name} started in {mode_str} mode: {self.measurements_per_batch} measurements '
+                        f'{self.router_name} started in {mode_str} mode ({collection_str}): {self.measurements_per_batch} measurements '
                         f'per trigger'
                     )
-            else:
-                self.get_logger().error('Failed to upload collection script')
         else:
             self.get_logger().error('Failed to connect to router')
     
@@ -119,17 +145,34 @@ class RouterNode(Node):
             self.ssh_client = None
             return False
     
-    def upload_collection_script(self):
-        """Upload the CSI collection script to the router"""
-        # Generate script content
-        script_content = prepare_collection_script({
-            'measurements_per_batch': self.measurements_per_batch,
-            'batch_interval': self.batch_interval,
-            'connection_timeout': self.connection_timeout,
-            'mac_address': self.mac_address,
-            'remote_file': self.remote_file,
-            'remote_script': self.remote_script,
-        })
+    def upload_collection_script(self, script_type='csi'):
+        """Upload the collection script to the router
+        
+        Args:
+            script_type: 'csi' for CSI collection or 'ftm' for FTM collection
+        """
+        # Determine script parameters based on type
+        if script_type == 'ftm':
+            script_content = prepare_ftm_collection_script({
+                'measurements_per_batch': self.measurements_per_batch,
+                'connection_timeout': self.connection_timeout,
+                'mac_address': self.mac_address,
+                'remote_file': self.remote_ftm_file,
+            })
+            remote_script = self.remote_ftm_script
+            script_name = "FTM collection script"
+        else:  # csi
+            script_content = prepare_collection_script({
+                'measurements_per_batch': self.measurements_per_batch,
+                'batch_interval': self.batch_interval,
+                'connection_timeout': self.connection_timeout,
+                'mac_address': self.mac_address,
+                'remote_file': self.remote_file,
+                'remote_script': self.remote_script,
+            })
+            remote_script = self.remote_script
+            script_name = "CSI collection script"
+        
         try:
             # Write script to temporary local file
             with tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.sh') as tmp:
@@ -143,7 +186,7 @@ class RouterNode(Node):
                 '-o', 'PubkeyAcceptedKeyTypes=+ssh-rsa',
                 '-o', 'StrictHostKeyChecking=no',
                 tmp_path,
-                f'{self.username}@{self.host}:{self.remote_script}'
+                f'{self.username}@{self.host}:{remote_script}'
             ]
             
             result = subprocess.run(scp_cmd, capture_output=True, text=True, timeout=30)
@@ -153,35 +196,64 @@ class RouterNode(Node):
             
             if result.returncode == 0:
                 # Make script executable
-                self.ssh_client.exec_command(f'chmod +x {self.remote_script}')
-                self.get_logger().info(f"Uploaded collection script to {self.remote_script}")
+                self.ssh_client.exec_command(f'chmod +x {remote_script}')
+                self.get_logger().info(f"Uploaded {script_name} to {remote_script}")
                 return True
             else:
-                self.get_logger().error(f"SCP failed: {result.stderr}")
+                self.get_logger().error(f"SCP failed for {script_name}: {result.stderr}")
                 return False
         
         except Exception as e:
-            self.get_logger().error(f"Failed to upload script: {e}")
+            self.get_logger().error(f"Failed to upload {script_name}: {e}")
             return False
     
     def collect_batch(self):
-        """Run collection script, SCP data back, and publish"""
+        """Run collection script(s), SCP data back, and publish"""
         if not self.ssh_client:
             self.get_logger().warn('Not connected, skipping batch')
             return
         
+        # Collect CSI if enabled
+        if self.collection_mode in ['csi', 'both']:
+            self._collect_data('csi')
+        
+        # Collect FTM if enabled
+        if self.collection_mode in ['ftm', 'both']:
+            self._collect_data('ftm')
+    
+    def _collect_data(self, data_type='csi'):
+        """Collect data of specified type (csi or ftm)
+        
+        Args:
+            data_type: 'csi' for CSI/AoA data or 'ftm' for ToF data
+        """
+        if not self.ssh_client:
+            return
+        
+        # Determine parameters based on data type
+        if data_type == 'ftm':
+            script = self.remote_ftm_script
+            remote_file = self.remote_ftm_file
+            batch_id = self.ftm_batch_count
+            data_label = "FTM"
+        else:  # csi
+            script = self.remote_script
+            remote_file = self.remote_file
+            batch_id = self.batch_count
+            data_label = "CSI"
+        
         try:
             # 1. Execute the collection script on the router
-            self.get_logger().info(f'Starting batch #{self.batch_count + 1}...')
-            stdin, stdout, stderr = self.ssh_client.exec_command(self.remote_script, timeout=30)
+            self.get_logger().info(f'Starting {data_label} batch #{batch_id + 1}...')
+            stdin, stdout, stderr = self.ssh_client.exec_command(script, timeout=60)
             
             # Wait for script to complete
             exit_status = stdout.channel.recv_exit_status()
             
             if exit_status != 0:
                 error_output = stderr.read().decode('utf-8')
-                self.get_logger().error(f'Collection script failed: {error_output}')
-                self.collect_batch()
+                self.get_logger().error(f'{data_label} collection script failed: {error_output}')
+                return
             
             # 2. SCP the data file back
             local_file = tempfile.NamedTemporaryFile(mode='w', delete=False, suffix='.txt')
@@ -193,14 +265,14 @@ class RouterNode(Node):
                 '-o', 'HostKeyAlgorithms=+ssh-rsa',
                 '-o', 'PubkeyAcceptedKeyTypes=+ssh-rsa',
                 '-o', 'StrictHostKeyChecking=no',
-                f'{self.username}@{self.host}:{self.remote_file}',
+                f'{self.username}@{self.host}:{remote_file}',
                 local_path
             ]
             
             result = subprocess.run(scp_cmd, capture_output=True, text=True, timeout=10)
             
             if result.returncode != 0:
-                self.get_logger().error(f'SCP failed: {result.stderr}')
+                self.get_logger().error(f'{data_label} SCP failed: {result.stderr}')
                 os.unlink(local_path)
                 return
             
@@ -212,29 +284,34 @@ class RouterNode(Node):
             os.unlink(local_path)
             
             # Filter: only keep lines that contain actual measurement data
-            # All measurement lines have "Measurement:" in them
             measurements = [m for m in measurements if m and 'Measurement:' in m]
             
             if measurements:
                 # Publish as JSON batch
                 msg = String()
                 msg.data = json.dumps({
-                    'batch_id': self.batch_count,
+                    'data_type': data_type,
+                    'batch_id': batch_id,
                     'timestamp': time.time(),
                     'measurements': measurements,
                     'count': len(measurements)
                 })
                 self.publisher.publish(msg)
                 
-                self.batch_count += 1
+                # Increment appropriate counter
+                if data_type == 'ftm':
+                    self.ftm_batch_count += 1
+                else:
+                    self.batch_count += 1
+                
                 self.get_logger().info(
-                    f'Published batch #{self.batch_count}: {len(measurements)} measurements'
+                    f'Published {data_label} batch #{batch_id + 1}: {len(measurements)} measurements'
                 )
             else:
-                self.get_logger().warn('No measurements in batch')
+                self.get_logger().warn(f'No {data_label} measurements in batch')
                 
         except Exception as e:
-            self.get_logger().error(f'Error in batch collection: {e}')
+            self.get_logger().error(f'Error in {data_label} batch collection: {e}')
     
     def destroy_node(self):
         """Cleanup"""
@@ -243,7 +320,7 @@ class RouterNode(Node):
                 self.ssh_client.close()
                 if hasattr(self.ssh_client, '_transport') and self.ssh_client._transport:
                     self.ssh_client._transport.close()
-            except:
+            except Exception:
                 pass
         
         super().destroy_node()

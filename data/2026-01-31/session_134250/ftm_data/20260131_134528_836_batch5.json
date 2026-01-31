@@ -1,0 +1,15 @@
+{
+  "data_type": "ftm",
+  "batch_id": 5,
+  "timestamp": "2026-01-31T13:45:28.836290",
+  "measurements": [
+    "[ 7497.856312] wil6210 0000:01:00.0 wlan0: wil_ftm_evt_per_dest_res: [FTM] Measurement: 46464274332, 35748676092, 35757821952, 46475282112",
+    "[ 7497.930477] wil6210 0000:01:00.0 wlan0: wil_ftm_evt_per_dest_res: [FTM] Measurement: 46668187548, 28242486636, 28251629568, 46679209836",
+    "[ 7498.067930] wil6210 0000:01:00.0 wlan0: wil_ftm_evt_per_dest_res: [FTM] Measurement: 46993512348, 28796803068, 28805947392, 47004511212",
+    "[ 7498.119155] wil6210 0000:01:00.0 wlan0: wil_ftm_evt_per_dest_res: [FTM] Measurement: 47114868636, 29189550792, 29198690304, 47125867500",
+    "[ 7498.182426] wil6210 0000:01:00.0 wlan0: wil_ftm_evt_per_dest_res: [FTM] Measurement: 47236286364, 29378209464, 29387360256, 47247296520",
+    "[ 7498.233633] wil6210 0000:01:00.0 wlan0: wil_ftm_evt_per_dest_res: [FTM] Measurement: 47357833116, 29570737776, 29579888640, 47368843356",
+    "[ 7498.316233] wil6210 0000:01:00.0 wlan0: wil_ftm_evt_per_dest_res: [FTM] Measurement: 47479281564, 29800029516, 29809182720, 47490294108"
+  ],
+  "count": 7
+}

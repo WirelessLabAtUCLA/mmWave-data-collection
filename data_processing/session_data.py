@@ -152,6 +152,161 @@ class RouterMeasurement:
     
 
 @dataclass
+class FTMMeasurement:
+    """Single FTM (Fine Time Measurement) measurement.
+    
+    Parses FTM measurement strings according to the format:
+    [system_timestamp] wil6210 ... [FTM] Measurement: t1,t2,t3,t4
+    
+    The four timestamps (t1, t2, t3, t4) are in picoseconds and represent:
+    - t1: Time packet left initiator
+    - t2: Time packet arrived at responder
+    - t3: Time ACK left responder
+    - t4: Time ACK arrived at initiator
+    """
+    system_timestamp: float
+    t1: int  # picoseconds
+    t2: int  # picoseconds
+    t3: int  # picoseconds
+    t4: int  # picoseconds
+    raw_string: str
+    
+    @classmethod
+    def from_string(cls, measurement_string: str) -> 'FTMMeasurement':
+        """Parse an FTM measurement string.
+        
+        Example format:
+        "[ 6477.673180] wil6210 0000:01:00.0 wlan0: wil_ftm_evt_per_dest_res: [FTM] Measurement: 36147079068, 43575762336, 43584915456, 36158089524"
+        
+        Args:
+            measurement_string: Raw FTM measurement string
+            
+        Returns:
+            FTMMeasurement object with parsed data
+            
+        Raises:
+            ValueError: If the measurement string cannot be parsed
+        """
+        # Extract system timestamp from brackets
+        timestamp_match = re.search(r'\[\s*(\d+\.\d+)\]', measurement_string)
+        if not timestamp_match:
+            raise ValueError("Could not extract system timestamp")
+        system_timestamp = float(timestamp_match.group(1))
+        
+        # Extract the measurement data after "[FTM] Measurement:"
+        if '[FTM] Measurement:' in measurement_string:
+            data_part = measurement_string.split('[FTM] Measurement:')[1].strip()
+        else:
+            raise ValueError("FTM Measurement marker not found")
+        
+        # Split by comma and parse the 4 timestamps
+        parts = [p.strip() for p in data_part.split(',')]
+        
+        if len(parts) < 4:
+            raise ValueError(f"Insufficient FTM data: expected 4 timestamps, got {len(parts)}")
+        
+        try:
+            t1 = int(parts[0])
+            t2 = int(parts[1])
+            t3 = int(parts[2])
+            t4 = int(parts[3])
+        except ValueError as e:
+            raise ValueError(f"Failed to parse FTM timestamps: {e}")
+        
+        return cls(
+            system_timestamp=system_timestamp,
+            t1=t1,
+            t2=t2,
+            t3=t3,
+            t4=t4,
+            raw_string=measurement_string
+        )
+    
+    def get_timestamps(self) -> List[int]:
+        """Get all four timestamps as a list.
+        
+        Returns:
+            List of [t1, t2, t3, t4] in picoseconds
+        """
+        return [self.t1, self.t2, self.t3, self.t4]
+    
+    def calculate_rtt(self) -> int:
+        """Calculate Round Trip Time in picoseconds.
+        
+        RTT = (t4 - t1) - (t3 - t2)
+        
+        Returns:
+            RTT in picoseconds
+        """
+        return (self.t4 - self.t1) - (self.t3 - self.t2)
+
+
+@dataclass
+class FTMBatch:
+    """Batch of FTM measurements."""
+    batch_id: int
+    timestamp: datetime
+    measurements: List[FTMMeasurement]
+    count: int
+    file_path: Optional[Path] = None
+    
+    @classmethod
+    def from_file(cls, file_path: Path) -> 'FTMBatch':
+        """Load FTM batch data from JSON file.
+        
+        Skips measurements that cannot be parsed (poor quality data).
+        """
+        with open(file_path, 'r') as f:
+            data = json.load(f)
+        
+        measurements = []
+        skipped_count = 0
+        
+        for i, measurement_str in enumerate(data['measurements']):
+            try:
+                measurement = FTMMeasurement.from_string(measurement_str)
+                measurements.append(measurement)
+            except (ValueError, IndexError) as e:
+                # Skip poor quality measurements
+                skipped_count += 1
+                # Optionally log warning (uncomment for debugging)
+                # print(f"Warning: Skipped FTM measurement {i} in batch {data['batch_id']}: {e}")
+        
+        return cls(
+            batch_id=data['batch_id'],
+            timestamp=datetime.fromisoformat(data['timestamp']),
+            measurements=measurements,
+            count=len(measurements),
+            file_path=file_path
+        )
+    
+    def get_all_timestamps(self) -> np.ndarray:
+        """Get all FTM timestamps as a numpy array.
+        
+        Returns:
+            Numpy array of shape (num_measurements, 4) containing [t1, t2, t3, t4] in picoseconds
+        """
+        if not self.measurements:
+            return np.array([])
+        
+        timestamps = []
+        for measurement in self.measurements:
+            timestamps.append(measurement.get_timestamps())
+        return np.array(timestamps, dtype=np.int64)
+    
+    def get_all_rtt(self) -> np.ndarray:
+        """Get all RTT values as a numpy array.
+        
+        Returns:
+            Numpy array of RTT values in picoseconds
+        """
+        if not self.measurements:
+            return np.array([])
+        
+        return np.array([m.calculate_rtt() for m in self.measurements], dtype=np.int64)
+
+
+@dataclass
 class RouterBatch:
     """Batch of router measurements."""
     batch_id: int
@@ -255,19 +410,30 @@ class DataPoint:
     timestamp: datetime
     gps: GPSCoordinate
     router_batch_info: Dict[str, Any]
+    ftm_batch_info: Optional[Dict[str, Any]] = None
     image_path: Optional[Path] = None
     router_batch: Optional[RouterBatch] = None
+    ftm_batch: Optional[FTMBatch] = None
     
     @classmethod
     def from_dict(cls, data: Dict[str, Any], session_dir: Path) -> 'DataPoint':
-        """Create DataPoint from dictionary."""
+        """Create DataPoint from dictionary.
+        
+        Handles both old format (router_batch) and new format (csi_batch + ftm_batch).
+        """
+        # Handle backward compatibility: older sessions use 'router_batch', newer use 'csi_batch'
+        router_batch_info = data.get('csi_batch') or data.get('router_batch')
+        ftm_batch_info = data.get('ftm_batch')
+        
         return cls(
             index=data['index'],
             timestamp=datetime.fromisoformat(data['timestamp']),
             gps=GPSCoordinate.from_dict(data['gps']),
-            router_batch_info=data['router_batch'],
+            router_batch_info=router_batch_info,
+            ftm_batch_info=ftm_batch_info,
             image_path=session_dir / data['image'] if 'image' in data else None,
-            router_batch=None  # Loaded lazily
+            router_batch=None,  # Loaded lazily
+            ftm_batch=None  # Loaded lazily
         )
     
     def load_router_batch(self, session_dir: Path) -> RouterBatch:
@@ -277,15 +443,32 @@ class DataPoint:
             self.router_batch = RouterBatch.from_file(batch_file)
         return self.router_batch
     
+    def load_ftm_batch(self, session_dir: Path) -> Optional[FTMBatch]:
+        """Load the associated FTM batch data if it exists."""
+        if self.ftm_batch_info is None:
+            return None
+        
+        if self.ftm_batch is None:
+            batch_file = session_dir / self.ftm_batch_info['file']
+            if batch_file.exists():
+                self.ftm_batch = FTMBatch.from_file(batch_file)
+            else:
+                # File doesn't exist, return None
+                return None
+        return self.ftm_batch
+    
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary."""
-        return {
+        result = {
             'index': self.index,
             'timestamp': self.timestamp.isoformat(),
             'gps': self.gps.to_dict(),
             'router_batch_info': self.router_batch_info,
             'image_path': str(self.image_path) if self.image_path else None
         }
+        if self.ftm_batch_info is not None:
+            result['ftm_batch_info'] = self.ftm_batch_info
+        return result
 
 
 @dataclass
@@ -356,6 +539,112 @@ class SessionData:
             self.router_batches.append(data_point.load_router_batch(self.session_dir))
         return self.router_batches
     
+    def load_all_ftm_batches(self) -> List[Optional[FTMBatch]]:
+        """Load all FTM batch data for all data points."""
+        self.ftm_batches = []
+        for data_point in self.data_points:
+            ftm_batch = data_point.load_ftm_batch(self.session_dir)
+            self.ftm_batches.append(ftm_batch)
+        return self.ftm_batches
+    
+    def get_ftm_data(self, target_size: Optional[int] = None) -> np.ndarray:
+        """Get FTM data from all data points, padded to match CSI data size.
+        
+        Args:
+            target_size: Target number of measurements per batch. If None, will use
+                        the size from CSI data for each batch.
+        
+        Returns:
+            Numpy array of shape (total_measurements, 4) containing [t1, t2, t3, t4].
+            If FTM data is missing or insufficient for a batch, fills with zeros.
+        """
+        all_ftm_data = []
+        
+        for dp in self.data_points:
+            # Load FTM batch if available
+            ftm_batch = dp.load_ftm_batch(self.session_dir)
+            
+            # Determine target size for this batch
+            if target_size is None:
+                # Use CSI batch size as target
+                csi_batch = dp.load_router_batch(self.session_dir)
+                batch_target_size = len(csi_batch.csi_processed_data)
+            else:
+                batch_target_size = target_size
+            
+            # Get FTM timestamps or create zeros
+            if ftm_batch is not None and ftm_batch.count > 0:
+                ftm_timestamps = ftm_batch.get_all_timestamps()
+                
+                # Pad or truncate to match target size
+                if len(ftm_timestamps) < batch_target_size:
+                    # Pad with zeros
+                    padding = np.zeros((batch_target_size - len(ftm_timestamps), 4), dtype=np.int64)
+                    ftm_timestamps = np.vstack([ftm_timestamps, padding])
+                elif len(ftm_timestamps) > batch_target_size:
+                    # Truncate
+                    ftm_timestamps = ftm_timestamps[:batch_target_size]
+            else:
+                # No FTM data, create all zeros
+                ftm_timestamps = np.zeros((batch_target_size, 4), dtype=np.int64)
+            
+            all_ftm_data.append(ftm_timestamps)
+        
+        # Stack all batches
+        if all_ftm_data:
+            return np.vstack(all_ftm_data)
+        else:
+            return np.array([], dtype=np.int64).reshape(0, 4)
+    
+    def get_ftm_rtt_data(self, target_size: Optional[int] = None) -> np.ndarray:
+        """Get RTT (Round Trip Time) from FTM data, padded to match CSI data size.
+        
+        Args:
+            target_size: Target number of measurements per batch. If None, will use
+                        the size from CSI data for each batch.
+        
+        Returns:
+            Numpy array of RTT values in picoseconds.
+            If FTM data is missing or insufficient for a batch, fills with zeros.
+        """
+        all_rtt_data = []
+        
+        for dp in self.data_points:
+            # Load FTM batch if available
+            ftm_batch = dp.load_ftm_batch(self.session_dir)
+            
+            # Determine target size for this batch
+            if target_size is None:
+                # Use CSI batch size as target
+                csi_batch = dp.load_router_batch(self.session_dir)
+                batch_target_size = len(csi_batch.csi_processed_data)
+            else:
+                batch_target_size = target_size
+            
+            # Get RTT or create zeros
+            if ftm_batch is not None and ftm_batch.count > 0:
+                rtt_values = ftm_batch.get_all_rtt()
+                
+                # Pad or truncate to match target size
+                if len(rtt_values) < batch_target_size:
+                    # Pad with zeros
+                    padding = np.zeros(batch_target_size - len(rtt_values), dtype=np.int64)
+                    rtt_values = np.concatenate([rtt_values, padding])
+                elif len(rtt_values) > batch_target_size:
+                    # Truncate
+                    rtt_values = rtt_values[:batch_target_size]
+            else:
+                # No FTM data, create all zeros
+                rtt_values = np.zeros(batch_target_size, dtype=np.int64)
+            
+            all_rtt_data.append(rtt_values)
+        
+        # Stack all batches
+        if all_rtt_data:
+            return np.concatenate(all_rtt_data)
+        else:
+            return np.array([], dtype=np.int64)
+    
     def get_data_point(self, index: int) -> Optional[DataPoint]:
         """Get a data point by index."""
         for dp in self.data_points:
@@ -395,6 +684,10 @@ class SessionData:
     def summary(self) -> str:
         """Get a summary string of the session."""
         duration = self.get_duration()
+        
+        # Count data points with FTM data
+        ftm_count = sum(1 for dp in self.data_points if dp.ftm_batch_info is not None)
+        
         return (
             f"Session: {self.session_id}\n"
             f"Start: {self.start_time}\n"
@@ -402,6 +695,7 @@ class SessionData:
             f"Duration: {duration:.1f} seconds\n"
             f"Total Samples: {self.total_samples}\n"
             f"Data Points: {len(self.data_points)}\n"
+            f"Data Points with FTM: {ftm_count}\n"
             f"Images: {len(self.get_image_paths())}\n"
         )
     
@@ -410,14 +704,17 @@ class SessionData:
 
 
 def detect_bad_batches(session_dir: Path, verbose: bool = True) -> List[int]:
-    """Detect batches with insufficient or invalid data.
+    """Detect batches with insufficient or invalid CSI data.
+    
+    Only checks CSI/router batch data validity. FTM data is optional and
+    missing FTM data does not flag a batch as bad.
     
     Args:
         session_dir: Path to session directory
         verbose: Whether to print detailed information about bad batches
     
     Returns:
-        List of indices of bad batches
+        List of indices of bad batches (based on CSI data only)
     """
     session_dir = Path(session_dir)
     metadata_file = session_dir / 'metadata.json'
@@ -436,16 +733,19 @@ def detect_bad_batches(session_dir: Path, verbose: bool = True) -> List[int]:
         print("-" * 60)
     
     for i, data_point in enumerate(metadata['data_points']):
-        if 'router_batch' not in data_point or 'file' not in data_point['router_batch']:
+        # Check for CSI batch info (handle both old and new format)
+        csi_batch_info = data_point.get('csi_batch') or data_point.get('router_batch')
+        
+        if not csi_batch_info or 'file' not in csi_batch_info:
             if verbose:
-                print(f"Batch {i}: Missing router_batch info")
+                print(f"Batch {i}: Missing CSI batch info")
             bad_indices.append(i)
             continue
 
-        router_file = session_dir / data_point['router_batch']['file']
+        router_file = session_dir / csi_batch_info['file']
         if not router_file.exists():
             if verbose:
-                print(f"Batch {i}: Router file not found: {router_file.name}")
+                print(f"Batch {i}: CSI file not found: {router_file.name}")
             bad_indices.append(i)
             continue
         
@@ -455,10 +755,11 @@ def detect_bad_batches(session_dir: Path, verbose: bool = True) -> List[int]:
             
             if 'measurements' not in batch_data or not batch_data['measurements']:
                 if verbose:
-                    print(f"Batch {i}: No measurements found")
+                    print(f"Batch {i}: No CSI measurements found")
                 bad_indices.append(i)
                 continue
 
+            # Count valid CSI measurements
             valid_measurements = 0
             for measurement_str in batch_data['measurements']:
                 try:
@@ -467,19 +768,20 @@ def detect_bad_batches(session_dir: Path, verbose: bool = True) -> List[int]:
                 except (ValueError, IndexError):
                     pass
             
-            if valid_measurements == 0 or valid_measurements < len(batch_data['measurements']):
+            # Only flag as bad if NO valid measurements exist
+            if valid_measurements == 0:
                 if verbose:
-                    print(f"Batch {i}: All measurements failed to parse (0/{len(batch_data['measurements'])} valid)")
+                    print(f"Batch {i}: All CSI measurements failed to parse (0/{len(batch_data['measurements'])} valid)")
                 bad_indices.append(i)
                 
         except Exception as e:
             if verbose:
-                print(f"Batch {i}: Error loading batch: {e}")
+                print(f"Batch {i}: Error loading CSI batch: {e}")
             bad_indices.append(i)
     
     if verbose:
         print("-" * 60)
-        print(f"Found {len(bad_indices)} bad batches: {bad_indices}")
+        print(f"Found {len(bad_indices)} bad batches (based on CSI data): {bad_indices}")
     
     return bad_indices
 
@@ -492,10 +794,11 @@ def clean_session_data(session_dir: Path, batch_indices_to_remove: List[int],
     1. Load the metadata.json file
     2. Remove data points at the specified indices
     3. Delete associated image files
-    4. Delete associated router batch files
-    5. Renumber remaining data points
-    6. Update metadata and save it
-    7. Return a new SessionData object with cleaned data
+    4. Delete associated CSI/router batch files
+    5. Delete associated FTM batch files (if they exist)
+    6. Renumber remaining data points
+    7. Update metadata and save it
+    8. Return a new SessionData object with cleaned data
     
     Args:
         session_dir: Path to session directory
@@ -547,14 +850,23 @@ def clean_session_data(session_dir: Path, batch_indices_to_remove: List[int],
             else:
                 print(f"Image not found (already deleted?): {image_path.name}")
         
-        # Delete router batch file if it exists
-        if 'router_batch' in data_point and 'file' in data_point['router_batch']:
-            router_file = session_dir / data_point['router_batch']['file']
-            if router_file.exists():
-                os.remove(router_file)
-                print(f"Deleted router batch: {router_file.name}")
+        # Delete CSI/router batch file if it exists (handle both old and new format)
+        csi_batch_info = data_point.get('csi_batch') or data_point.get('router_batch')
+        if csi_batch_info and 'file' in csi_batch_info:
+            csi_file = session_dir / csi_batch_info['file']
+            if csi_file.exists():
+                os.remove(csi_file)
+                print(f"Deleted CSI batch: {csi_file.name}")
             else:
-                print(f"Router batch not found (already deleted?): {router_file.name}")
+                print(f"CSI batch not found (already deleted?): {csi_file.name}")
+        
+        # Delete FTM batch file if it exists (optional, won't error if missing)
+        if 'ftm_batch' in data_point and 'file' in data_point['ftm_batch']:
+            ftm_file = session_dir / data_point['ftm_batch']['file']
+            if ftm_file.exists():
+                os.remove(ftm_file)
+                print(f"Deleted FTM batch: {ftm_file.name}")
+            # Don't print warning if FTM file doesn't exist - it's optional
         
         # Remove from metadata
         del metadata['data_points'][idx]

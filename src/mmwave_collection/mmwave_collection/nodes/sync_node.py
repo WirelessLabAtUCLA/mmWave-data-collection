@@ -39,6 +39,7 @@ class SyncNode(Node):
         
         # Create subdirectories
         (self.session_dir / 'rx_router_data').mkdir(exist_ok=True)
+        (self.session_dir / 'ftm_data').mkdir(exist_ok=True)
         (self.session_dir / 'images').mkdir(exist_ok=True)
         
         # Metadata
@@ -52,6 +53,13 @@ class SyncNode(Node):
         self.router_buffer = deque(maxlen=max_queue_size)
         self.gps_buffer = deque(maxlen=max_queue_size)
         self.camera_buffer = deque(maxlen=max_queue_size)
+        
+        # For 'both' mode: group CSI and FTM messages together
+        self.pending_csi_msg = None
+        self.pending_ftm_msg = None
+        self.pending_csi_time = None
+        self.pending_ftm_time = None
+        self.group_timeout = 2.0  # seconds to wait for both CSI and FTM
         
         # Publisher for save confirmation
         self.save_confirm_pub = self.create_publisher(Empty, '/sync_node/save_complete', 10)
@@ -95,7 +103,25 @@ class SyncNode(Node):
     def router_callback(self, msg):
         """Store router data with timestamp"""
         ros_time = self.get_clock().now()
-        self.router_buffer.append((ros_time, msg))
+        
+        # Parse message to check data type
+        try:
+            batch_data = json.loads(msg.data)
+            data_type = batch_data.get('data_type', 'csi')
+        except json.JSONDecodeError:
+            data_type = 'csi'  # Default to CSI if can't parse
+        
+        # In discrete mode with 'both', group CSI and FTM together
+        if self.discrete_mode and data_type in ['csi', 'ftm']:
+            if data_type == 'csi':
+                self.pending_csi_msg = msg
+                self.pending_csi_time = ros_time
+            else:  # ftm
+                self.pending_ftm_msg = msg
+                self.pending_ftm_time = ros_time
+        else:
+            # For non-discrete or single mode, add to buffer normally
+            self.router_buffer.append((ros_time, msg))
 
     def gps_callback(self, msg):
         """Store GPS data with timestamp"""
@@ -112,25 +138,100 @@ class SyncNode(Node):
 
     def try_sync_discrete(self):
         """Synchronize messages in discrete mode"""
-        if not self.router_buffer or not self.gps_buffer or not self.camera_buffer:
+        # Check if we have grouped CSI+FTM ready to process
+        if self.pending_csi_msg is not None:
+            # Check if we also have FTM, or if timeout has passed
+            current_time = self.get_clock().now()
+            time_since_csi = (current_time - self.pending_csi_time).nanoseconds / 1e9 if self.pending_csi_time else 0
+            
+            # Process if: we have both, or timeout passed (then process CSI only)
+            has_both = self.pending_ftm_msg is not None
+            timeout_passed = time_since_csi > self.group_timeout
+            
+            if has_both or timeout_passed:
+                # We have at least CSI, check for camera
+                if not self.camera_buffer:
+                    return
+                
+                # Use CSI time as the reference time
+                router_time = self.pending_csi_time
+                
+                # Find closest camera
+                camera_match = None
+                min_camera_diff = float('inf')
+                
+                for k, (camera_time, camera_msg) in enumerate(self.camera_buffer):
+                    time_diff = abs((router_time - camera_time).nanoseconds / 1e9)
+                    if time_diff < min_camera_diff:
+                        min_camera_diff = time_diff
+                        camera_match = camera_msg
+                
+                if camera_match is None:
+                    return
+                
+                # Find GPS if available
+                gps_match = None
+                if self.gps_buffer:
+                    min_gps_diff = float('inf')
+                    for j, (gps_time, gps_msg) in enumerate(self.gps_buffer):
+                        time_diff = abs((router_time - gps_time).nanoseconds / 1e9)
+                        if time_diff < min_gps_diff:
+                            min_gps_diff = time_diff
+                            gps_match = gps_msg
+                
+                if gps_match is None and self.last_gps:
+                    gps_match = self.last_gps
+                
+                # Process grouped data
+                if timeout_passed and not has_both:
+                    self.get_logger().warn('FTM data not received within timeout, processing CSI only')
+                
+                self.process_grouped_data(self.pending_csi_msg, self.pending_ftm_msg, gps_match, camera_match)
+                
+                # Clear pending messages
+                self.pending_csi_msg = None
+                self.pending_ftm_msg = None
+                self.pending_csi_time = None
+                self.pending_ftm_time = None
+                return
+        
+        # Original buffer-based sync for non-grouped messages
+        if not self.router_buffer:
+            return
+        
+        # In discrete mode, check what data we have
+        if not self.camera_buffer:
+            return
+        
+        # GPS handling: only require if gps_required is True
+        if self.gps_required and not self.gps_buffer and not self.last_gps:
             return
         
         for i, (router_time, router_msg) in enumerate(self.router_buffer):
-            # Find closest GPS message
+            # Find closest GPS message (don't remove it - allow reuse for multiple router messages)
             gps_match = None
-            gps_idx = None
             min_gps_diff = float('inf')
             
-            for j, (gps_time, gps_msg) in enumerate(self.gps_buffer):
-                time_diff = abs((router_time - gps_time).nanoseconds / 1e9)
-                if time_diff < min_gps_diff:
-                    min_gps_diff = time_diff
-                    gps_match = gps_msg
-                    gps_idx = j
+            if self.gps_buffer:
+                for j, (gps_time, gps_msg) in enumerate(self.gps_buffer):
+                    time_diff = abs((router_time - gps_time).nanoseconds / 1e9)
+                    if time_diff < min_gps_diff:
+                        min_gps_diff = time_diff
+                        gps_match = gps_msg
             
-            # Find closest camera message
+            # Use last GPS if available and no buffer entries, or None if GPS not required
+            if gps_match is None:
+                if self.last_gps:
+                    gps_match = self.last_gps
+                    self.get_logger().debug('Using last GPS for sync (no recent GPS data)')
+                elif not self.gps_required:
+                    gps_match = None  # Explicitly set to None when GPS is disabled
+                    self.get_logger().debug('Syncing without GPS (GPS not required)')
+                else:
+                    continue  # Skip if GPS required but not available
+            
+            # Find closest camera message (don't remove it - allow reuse for multiple router messages)
             camera_match = None
-            camera_idx = None
             min_camera_diff = float('inf')
             
             for k, (camera_time, camera_msg) in enumerate(self.camera_buffer):
@@ -138,25 +239,27 @@ class SyncNode(Node):
                 if time_diff < min_camera_diff:
                     min_camera_diff = time_diff
                     camera_match = camera_msg
-                    camera_idx = k
+            
+            if camera_match is None:
+                # No camera data available, skip this router message for now
+                continue
             
             # Found a match! Process it
+            if gps_match:
+                self.get_logger().debug(f'Syncing router message with GPS diff: {min_gps_diff:.3f}s, camera diff: {min_camera_diff:.3f}s')
+            else:
+                self.get_logger().debug(f'Syncing router message with camera diff: {min_camera_diff:.3f}s (no GPS)')
+            
             self.process_synced_data(router_msg, gps_match, camera_match)
             
-            # Remove processed messages from buffers
-            # Remove from oldest to newest to maintain indices
-            if camera_idx is not None:
-                del self.camera_buffer[camera_idx]
-            if gps_idx is not None:
-                del self.gps_buffer[gps_idx]
-            # Remove router message last (we're iterating over it)
+            # Remove only the router message that was processed
             del self.router_buffer[i]
             
             # Only process one match per timer callback
             return
 
     def try_sync(self):
-        """Periodically try to synchronize messages from all three sources"""
+        """Periodi[cally try to synchronize messages from all three sources"""
         # Need at least one message from each source
         if not self.router_buffer or not self.gps_buffer or not self.camera_buffer:
             return
@@ -208,6 +311,111 @@ class SyncNode(Node):
             # Only process one match per timer callback
             return
     
+    def process_grouped_data(self, csi_msg, ftm_msg, gps_msg, camera_msg):
+        """Handle grouped CSI+FTM messages from 'both' mode - saves as single data point"""
+        self.sample_count += 1
+        timestamp = datetime.now()
+        timestamp_str = timestamp.strftime('%Y%m%d_%H%M%S_%f')[:-3]  # Include milliseconds
+        
+        self.get_logger().info(f'Synchronized grouped sample #{self.sample_count}')
+        
+        # Parse CSI data
+        csi_batch_id = 0
+        csi_measurements = []
+        csi_count = 0
+        if csi_msg:
+            try:
+                csi_data = json.loads(csi_msg.data)
+                csi_batch_id = csi_data.get('batch_id', 0)
+                csi_measurements = csi_data.get('measurements', [])
+                csi_count = csi_data.get('count', 0)
+            except json.JSONDecodeError:
+                self.get_logger().error('Failed to parse CSI data')
+        
+        # Parse FTM data (may be None if unreliable)
+        ftm_batch_id = 0
+        ftm_measurements = []
+        ftm_count = 0
+        if ftm_msg:
+            try:
+                ftm_data = json.loads(ftm_msg.data)
+                ftm_batch_id = ftm_data.get('batch_id', 0)
+                ftm_measurements = ftm_data.get('measurements', [])
+                ftm_count = ftm_data.get('count', 0)
+            except json.JSONDecodeError:
+                self.get_logger().error('Failed to parse FTM data')
+        
+        # Save CSI data
+        csi_file = self.session_dir / 'rx_router_data' / f'{timestamp_str}_batch{csi_batch_id}.json'
+        with open(csi_file, 'w') as f:
+            json.dump({
+                'data_type': 'csi',
+                'batch_id': csi_batch_id,
+                'timestamp': timestamp.isoformat(),
+                'measurements': csi_measurements,
+                'count': csi_count
+            }, f, indent=2)
+        
+        # Save FTM data
+        ftm_file = self.session_dir / 'ftm_data' / f'{timestamp_str}_batch{ftm_batch_id}.json'
+        with open(ftm_file, 'w') as f:
+            json.dump({
+                'data_type': 'ftm',
+                'batch_id': ftm_batch_id,
+                'timestamp': timestamp.isoformat(),
+                'measurements': ftm_measurements,
+                'count': ftm_count
+            }, f, indent=2)
+        
+        # Save image
+        image_file = self.session_dir / 'images' / f'{timestamp_str}.jpg'
+        image_file.write_bytes(bytes(camera_msg.data))
+        
+        # Record metadata with both CSI and FTM in single data point
+        data_point = {
+            'index': self.sample_count,
+            'timestamp': timestamp.isoformat(),
+            'gps': {
+                'latitude': gps_msg.latitude if gps_msg else 0.0,
+                'longitude': gps_msg.longitude if gps_msg else 0.0,
+                'altitude': gps_msg.altitude if gps_msg else 0.0,
+            },
+            'csi_batch': {
+                'batch_id': csi_batch_id,
+                'measurement_count': csi_count,
+                'file': str(csi_file.relative_to(self.session_dir))
+            },
+            'ftm_batch': {
+                'batch_id': ftm_batch_id,
+                'measurement_count': ftm_count,
+                'file': str(ftm_file.relative_to(self.session_dir))
+            },
+            'image': str(image_file.relative_to(self.session_dir))
+        }
+        
+        self.metadata['data_points'].append(data_point)
+        
+        # Save metadata incrementally
+        metadata_file = self.session_dir / 'metadata.json'
+        with open(metadata_file, 'w') as f:
+            json.dump(self.metadata, f, indent=2)
+        
+        if gps_msg:
+            self.get_logger().info(
+                f'Saved grouped sample #{self.sample_count} - '
+                f'GPS: {gps_msg.latitude:.6f}, {gps_msg.longitude:.6f} - '
+                f'CSI: {csi_count} measurements, FTM: {ftm_count} measurements'
+            )
+        else:
+            self.get_logger().info(
+                f'Saved grouped sample #{self.sample_count} - '
+                f'GPS: N/A - '
+                f'CSI: {csi_count} measurements, FTM: {ftm_count} measurements'
+            )
+        
+        # Publish save confirmation for automated collection coordination
+        self.save_confirm_pub.publish(Empty())
+    
     def process_synced_data(self, rx_router_msg, gps_msg, camera_msg):
         """Handle synchronized messages from all sources"""
         self.sample_count += 1
@@ -219,6 +427,7 @@ class SyncNode(Node):
         # Parse router batch data (JSON format)
         try:
             batch_data = json.loads(rx_router_msg.data)
+            data_type = batch_data.get('data_type', 'csi')  # Default to 'csi' for backward compatibility
             batch_id = batch_data.get('batch_id', 0)
             measurements = batch_data.get('measurements', [])
             measurement_count = batch_data.get('count', 0)
@@ -227,11 +436,22 @@ class SyncNode(Node):
             measurements = [rx_router_msg.data]
             batch_id = 0
             measurement_count = 1
+            data_type = 'csi'
         
-        # Save RX router batch data
-        rx_router_file = self.session_dir / 'rx_router_data' / f'{timestamp_str}_batch{batch_id}.json'
-        with open(rx_router_file, 'w') as f:
+        # Determine save directory and file name based on data type
+        if data_type == 'ftm':
+            data_dir = self.session_dir / 'ftm_data'
+            data_file = data_dir / f'{timestamp_str}_batch{batch_id}.json'
+            data_label = 'FTM'
+        else:  # csi or default
+            data_dir = self.session_dir / 'rx_router_data'
+            data_file = data_dir / f'{timestamp_str}_batch{batch_id}.json'
+            data_label = 'CSI'
+        
+        # Save router batch data
+        with open(data_file, 'w') as f:
             json.dump({
+                'data_type': data_type,
                 'batch_id': batch_id,
                 'timestamp': timestamp.isoformat(),
                 'measurements': measurements,
@@ -252,9 +472,10 @@ class SyncNode(Node):
                 'altitude': gps_msg.altitude if gps_msg else 0.0,
             },
             'router_batch': {
+                'data_type': data_type,
                 'batch_id': batch_id,
                 'measurement_count': measurement_count,
-                'file': str(rx_router_file.relative_to(self.session_dir))
+                'file': str(data_file.relative_to(self.session_dir))
             },
             'image': str(image_file.relative_to(self.session_dir))
         }
@@ -270,13 +491,13 @@ class SyncNode(Node):
             self.get_logger().info(
                 f'Saved sample #{self.sample_count} - '
                 f'GPS: {gps_msg.latitude:.6f}, {gps_msg.longitude:.6f} - '
-                f'Router batch: {measurement_count} measurements'
+                f'{data_label} batch: {measurement_count} measurements'
             )
         else:
             self.get_logger().info(
                 f'Saved sample #{self.sample_count} - '
                 f'GPS: N/A - '
-                f'Router batch: {measurement_count} measurements'
+                f'{data_label} batch: {measurement_count} measurements'
             )
         
         # Publish save confirmation for automated collection coordination

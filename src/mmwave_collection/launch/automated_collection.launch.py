@@ -32,17 +32,25 @@ def generate_launch_description():
         description='Time to wait after rotation for stabilization (seconds)'
     )
     
+    collection_mode_arg = DeclareLaunchArgument(
+        'collection_mode',
+        default_value='both',
+        description='Collection mode: csi (AoA only), ftm (ToF only), or both (AoA+ToF)'
+    )
+    
     # Get configurations
     angle_start = LaunchConfiguration('angle_start')
     angle_end = LaunchConfiguration('angle_end')
     angle_step = LaunchConfiguration('angle_step')
     stabilization_time = LaunchConfiguration('stabilization_time')
+    collection_mode = LaunchConfiguration('collection_mode')
     
     return LaunchDescription([
         angle_start_arg,
         angle_end_arg,
         angle_step_arg,
         stabilization_time_arg,
+        collection_mode_arg,
         
         # Rotation table node
         Node(
@@ -78,6 +86,7 @@ def generate_launch_description():
                 'batch_interval': 1.0,
                 'connection_timeout': 10,
                 'discrete_mode': True,  # Discrete mode - wait for triggers
+                'collection_mode': collection_mode,  # CSI, FTM, or both
             }]
         ),
         

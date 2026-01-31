@@ -1,0 +1,54 @@
+---
+description: Avoid creating excess markdown documentation files
+alwaysApply: true
+---
+
+# Documentation Standards
+
+## Do Not Create Excess Markdown Files
+
+This project should maintain minimal documentation files. Only create markdown files when explicitly requested by the user.
+
+### ❌ DO NOT Create
+
+- README files for every feature or module
+- Separate markdown files for documentation unless specifically asked
+- Tutorial or guide markdown files proactively
+- Changelog or release notes files automatically
+
+### ✅ DO Create
+
+- Documentation only when the user explicitly requests it
+- Update existing README.md or documentation files when appropriate
+- Comments and docstrings in code instead of separate docs
+
+### Rationale
+
+This is a research/data collection project where:
+- Code should be self-documenting with good docstrings
+- Existing README files should be updated rather than creating new ones
+- Documentation proliferation creates maintenance burden
+- Users will ask for specific documentation when they need it
+
+### Examples
+
+```python
+# ❌ BAD: Creating README.md proactively
+# After adding a feature, don't automatically create docs/feature_guide.md
+
+# ✅ GOOD: Add docstrings to the code
+def plot_ftm_data(session: SessionData):
+    """Plot FTM data visualizations.
+    
+    Creates 4 plots: RTT over time, timestamps, histogram, and availability.
+    
+    Args:
+        session: SessionData object with loaded FTM data
+    """
+    pass
+```
+
+When documentation is truly needed, focus on:
+1. Clear function/class docstrings
+2. Usage examples in existing files
+3. Update README.md if major features are added

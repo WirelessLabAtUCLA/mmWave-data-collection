@@ -12,6 +12,9 @@ rx_router:
   username: "root"
   key_file: "~/.ssh/id_ed25519"  # Path to SSH private key
   
+  # Collection mode: 'csi' (AoA only), 'ftm' (ToF only), or 'both' (AoA+ToF)
+  collection_mode: "csi"  # Options: 'csi', 'ftm', 'both'
+  
   # CSI Collection parameters
   mac_address: "\\xf4\\x1e\\x57\\x64\\x92\\xae"  # MAC address for vendor command
   remote_file: "/tmp/csi_measurements.txt"  # Where measurements are stored on router
@@ -34,7 +37,7 @@ tx_router:
 
 # GPS
 gps:
-  enabled: true
+  enabled: false
   auto_detect: true  # Auto-detect device path
   device: "auto"     # or specify: /dev/ttyUSB0 (Linux), /dev/cu.usbserial-* (Mac)
   baudrate: 9600

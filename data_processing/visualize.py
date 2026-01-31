@@ -124,7 +124,11 @@ def plot_animation_of_beamformer(session: SessionData, save_path: Path = None, p
         
     # Get image paths if plot_image is True
     image_paths = None
-    measurements_per_image = int(session.metadata['data_points'][0]['router_batch']['measurement_count'])
+
+    # Handle both old format (router_batch) and new format (csi_batch)
+    first_data_point = session.metadata['data_points'][0]
+    batch_info = first_data_point.get('csi_batch') or first_data_point.get('router_batch')
+    measurements_per_image = int(batch_info['measurement_count'])
     if plot_image:
         image_paths = session.get_image_paths()
         image_paths = np.repeat(image_paths, measurements_per_image)[global_indices]
@@ -201,7 +205,24 @@ def plot_animation_of_beamformer(session: SessionData, save_path: Path = None, p
     plt.close(fig)
     
     print(f"Animation saved successfully to: {session.get_save_plot_path() / save_path}")
+
+def plot_ftm_timeseries(session: SessionData, save_path: Path = None):
+    """Plot FTM timeseries.
     
+    Args:
+        session: SessionData object
+        save_path: Optional path to save the figure
+    """
+    ftm_data = session.get_ftm_data()
+    plt.figure(figsize=(12, 8))
+    plt.plot(np.mean(ftm_data, axis=1))
+    plt.xlabel('Sample Index')
+    plt.ylabel('Time (ns)')
+    plt.title(f'FTM Timeseries - {session.session_id}')
+    plt.show()
+    if save_path:
+        plt.savefig(save_path, dpi=150, bbox_inches='tight')
+        print(f"FTM timeseries plot saved to: {save_path}")
 
 def plot_gps_trajectory(session: SessionData, save_path: Path = None):
     """Plot GPS trajectory on a 2D map.
@@ -366,6 +387,214 @@ def create_all_plots(session: SessionData, output_dir: Path, include_animation: 
     print(f"All plots saved to: {output_dir}")
 
 
+def plot_csi_phase_heatmap(session: SessionData, averaged: bool = False, 
+                          save_path: Path = None, show: bool = False,
+                          figsize: tuple = (20, 8), cmap: str = 'twilight'):
+    """Plot CSI phase data as a heatmap with antennas as rows and time as columns.
+    
+    Creates a large heatmap where:
+    - Each row represents one antenna (16 antennas total)
+    - Each column represents one measurement in time
+    - Color represents the phase angle (-π to π)
+    
+    Args:
+        session: SessionData object with loaded router batches
+        averaged: If True, uses averaged CSI per batch. If False, uses all measurements
+        save_path: Optional path to save the plot (e.g., 'csi_heatmap.png')
+        show: Whether to display the plot
+        figsize: Figure size as (width, height) tuple
+        cmap: Matplotlib colormap name (default: 'twilight' for circular phase data)
+    """
+    # Get CSI data
+    csi_data = session.get_csi_data(averaged=averaged)
+    num_measurements, num_antennas = csi_data.shape
+    
+    print(f"Creating CSI phase heatmap: {num_measurements} measurements × {num_antennas} antennas")
+    
+    # Extract phase angles from complex CSI data
+    phase_data = np.angle(csi_data).T  # Transpose to get (antennas, time)
+    
+    # Create figure
+    fig, ax = plt.subplots(figsize=figsize)
+    
+    # Create heatmap
+    im = ax.imshow(phase_data, aspect='auto', cmap=cmap, 
+                   vmin=-np.pi, vmax=np.pi, interpolation='nearest')
+    
+    # Configure axes
+    ax.set_xlabel('Measurement Index (Time →)', fontsize=12)
+    ax.set_ylabel('Antenna Index', fontsize=12)
+    ax.set_title(f'CSI Phase Heatmap - {session.session_id}\n'
+                 f'({num_measurements} measurements × {num_antennas} antennas)', 
+                 fontsize=14, fontweight='bold')
+    
+    # Set y-axis ticks to show all antennas
+    ax.set_yticks(range(num_antennas))
+    ax.set_yticklabels([f'Ant {i}' for i in range(num_antennas)])
+    
+    # Add colorbar
+    cbar = plt.colorbar(im, ax=ax, label='Phase (radians)')
+    cbar.set_ticks([-np.pi, -np.pi/2, 0, np.pi/2, np.pi])
+    cbar.set_ticklabels(['-π', '-π/2', '0', 'π/2', 'π'])
+    
+    # Add grid for better readability
+    ax.set_xticks(np.arange(0, num_measurements, max(1, num_measurements // 20)))
+    ax.grid(False)
+    
+    plt.tight_layout()
+    
+    # Save if path provided
+    if save_path:
+        save_path = Path(save_path)
+        save_path.parent.mkdir(parents=True, exist_ok=True)
+        plt.savefig(save_path, dpi=300, bbox_inches='tight')
+        print(f"Saved CSI phase heatmap to: {save_path}")
+    
+    # Show if requested
+    if show:
+        plt.show()
+    else:
+        plt.close()
+
+
+def plot_csi_magnitude_heatmap(session: SessionData, averaged: bool = False,
+                               save_path: Path = None, show: bool = False,
+                               figsize: tuple = (20, 8), cmap: str = 'viridis'):
+    """Plot CSI magnitude data as a heatmap with antennas as rows and time as columns.
+    
+    Creates a large heatmap where:
+    - Each row represents one antenna (16 antennas total)
+    - Each column represents one measurement in time
+    - Color represents the magnitude/amplitude
+    
+    Args:
+        session: SessionData object with loaded router batches
+        averaged: If True, uses averaged CSI per batch. If False, uses all measurements
+        save_path: Optional path to save the plot (e.g., 'csi_magnitude_heatmap.png')
+        show: Whether to display the plot
+        figsize: Figure size as (width, height) tuple
+        cmap: Matplotlib colormap name (default: 'viridis')
+    """
+    # Get CSI data
+    csi_data = session.get_csi_data(averaged=averaged)
+    num_measurements, num_antennas = csi_data.shape
+    
+    print(f"Creating CSI magnitude heatmap: {num_measurements} measurements × {num_antennas} antennas")
+    
+    # Extract magnitude from complex CSI data
+    magnitude_data = np.abs(csi_data).T  # Transpose to get (antennas, time)
+    
+    # Create figure
+    fig, ax = plt.subplots(figsize=figsize)
+    
+    # Create heatmap
+    im = ax.imshow(magnitude_data, aspect='auto', cmap=cmap, interpolation='nearest')
+    
+    # Configure axes
+    ax.set_xlabel('Measurement Index (Time →)', fontsize=12)
+    ax.set_ylabel('Antenna Index', fontsize=12)
+    ax.set_title(f'CSI Magnitude Heatmap - {session.session_id}\n'
+                 f'({num_measurements} measurements × {num_antennas} antennas)', 
+                 fontsize=14, fontweight='bold')
+    
+    # Set y-axis ticks to show all antennas
+    ax.set_yticks(range(num_antennas))
+    ax.set_yticklabels([f'Ant {i}' for i in range(num_antennas)])
+    
+    # Add colorbar
+    cbar = plt.colorbar(im, ax=ax, label='Magnitude')
+    
+    # Add grid for better readability
+    ax.set_xticks(np.arange(0, num_measurements, max(1, num_measurements // 20)))
+    ax.grid(False)
+    
+    plt.tight_layout()
+    
+    # Save if path provided
+    if save_path:
+        save_path = Path(save_path)
+        save_path.parent.mkdir(parents=True, exist_ok=True)
+        plt.savefig(save_path, dpi=300, bbox_inches='tight')
+        print(f"Saved CSI magnitude heatmap to: {save_path}")
+    
+    # Show if requested
+    if show:
+        plt.show()
+    else:
+        plt.close()
+
+
+def plot_csi_combined_heatmap(session: SessionData, averaged: bool = False,
+                              save_path: Path = None, show: bool = False,
+                              figsize: tuple = (20, 12)):
+    """Plot both phase and magnitude CSI heatmaps in a single figure.
+    
+    Creates two stacked heatmaps:
+    - Top: Phase heatmap
+    - Bottom: Magnitude heatmap
+    
+    Args:
+        session: SessionData object with loaded router batches
+        averaged: If True, uses averaged CSI per batch. If False, uses all measurements
+        save_path: Optional path to save the plot (e.g., 'csi_combined_heatmap.png')
+        show: Whether to display the plot
+        figsize: Figure size as (width, height) tuple
+    """
+    # Get CSI data
+    csi_data = session.get_csi_data(averaged=averaged)
+    num_measurements, num_antennas = csi_data.shape
+    
+    print(f"Creating combined CSI heatmap: {num_measurements} measurements × {num_antennas} antennas")
+    
+    # Extract phase and magnitude
+    phase_data = np.angle(csi_data).T
+    magnitude_data = np.abs(csi_data).T
+    
+    # Create figure with two subplots
+    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=figsize, sharex=True)
+    
+    # Phase heatmap
+    im1 = ax1.imshow(phase_data, aspect='auto', cmap='twilight',
+                     vmin=-np.pi, vmax=np.pi, interpolation='nearest')
+    ax1.set_ylabel('Antenna Index', fontsize=11)
+    ax1.set_title(f'CSI Phase and Magnitude Heatmaps - {session.session_id}\n'
+                  f'Phase (top) and Magnitude (bottom)', 
+                  fontsize=13, fontweight='bold')
+    ax1.set_yticks(range(num_antennas))
+    ax1.set_yticklabels([f'Ant {i}' for i in range(num_antennas)])
+    
+    cbar1 = plt.colorbar(im1, ax=ax1, label='Phase (radians)')
+    cbar1.set_ticks([-np.pi, -np.pi/2, 0, np.pi/2, np.pi])
+    cbar1.set_ticklabels(['-π', '-π/2', '0', 'π/2', 'π'])
+    
+    # Magnitude heatmap
+    im2 = ax2.imshow(magnitude_data, aspect='auto', cmap='viridis', interpolation='nearest')
+    ax2.set_xlabel('Measurement Index (Time →)', fontsize=11)
+    ax2.set_ylabel('Antenna Index', fontsize=11)
+    ax2.set_yticks(range(num_antennas))
+    ax2.set_yticklabels([f'Ant {i}' for i in range(num_antennas)])
+    
+    cbar2 = plt.colorbar(im2, ax=ax2, label='Magnitude')
+    
+    # Set x-axis ticks
+    ax2.set_xticks(np.arange(0, num_measurements, max(1, num_measurements // 20)))
+    
+    plt.tight_layout()
+    
+    # Save if path provided
+    if save_path:
+        save_path = Path(save_path)
+        save_path.parent.mkdir(parents=True, exist_ok=True)
+        plt.savefig(save_path, dpi=300, bbox_inches='tight')
+        print(f"Saved combined CSI heatmap to: {save_path}")
+    
+    # Show if requested
+    if show:
+        plt.show()
+    else:
+        plt.close()
+
+
 if __name__ == "__main__":
     # Example usage
     session_dir = Path("../data/2025-10-30/session_141256")
@@ -385,4 +614,5 @@ if __name__ == "__main__":
     
     # Create beamformer animation
     # plot_animation_of_beamformer(session)
+
 

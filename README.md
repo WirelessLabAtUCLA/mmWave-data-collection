@@ -4,9 +4,11 @@ Automated batch data collection from 60GHz router with synchronized GPS and came
 
 ## Features
 
+- **Dual-Mode Collection**: Collect both CSI (AoA) and FTM (ToF) measurements simultaneously or separately
 - **Batch CSI Collection**: Collects 5 CSI measurements per batch from router via SSH
+- **FTM ToF Collection**: Fine Timing Measurement for Time-of-Flight distance estimation
 - **Discrete & Continuous Modes**: Manual trigger-based or automatic continuous collection
-- **Time-Synchronized**: GPS and camera data matched with CSI batches
+- **Time-Synchronized**: GPS and camera data matched with CSI/FTM batches
 - **Auto-Detection**: Automatically finds GPS devices on Ubuntu/macOS
 - **TUI Monitoring**: Terminal interface for real-time status with collection trigger
 - **Cross-Platform**: Works on Ubuntu and macOS
@@ -44,10 +46,16 @@ rx_router:
   host: "192.168.1.101"      # Your router IP
   username: "root"
   key_file: "~/.ssh/id_ed25519"
+  collection_mode: "both"    # Options: 'csi', 'ftm', 'both'
   mac_address: "\\xf4\\x1e\\x57\\x64\\x92\\xae"  # Target device MAC
   measurements_per_batch: 5
   batch_interval: 1.0
 ```
+
+**Collection Modes:**
+- `csi` - Only collect CSI data for Angle of Arrival (AoA)
+- `ftm` - Only collect FTM data for Time of Flight (ToF)
+- `both` - Collect both CSI and FTM data simultaneously
 
 ### 4. Build and Run
 
@@ -62,15 +70,24 @@ source install/setup.bash
 # Run (Continuous Mode - automatic collection)
 ros2 launch mmwave_collection collection.launch.py
 
+# Run with specific collection mode
+ros2 launch mmwave_collection collection.launch.py collection_mode:=csi    # CSI only
+ros2 launch mmwave_collection collection.launch.py collection_mode:=ftm    # FTM only
+ros2 launch mmwave_collection collection.launch.py collection_mode:=both   # Both (default)
+
 # OR Run (Discrete Mode - manual trigger collection)
 ros2 launch mmwave_collection collection.launch.py discrete_mode:=true
+ros2 launch mmwave_collection collection.launch.py discrete_mode:=true collection_mode:=both
 ```
 
 **See [DISCRETE_MODE.md](DISCRETE_MODE.md) for detailed guide on discrete collection mode.**
 
 ## How It Works
 
-1. **Router Node**: Every 1 second, collects 5 CSI measurements from router and publishes as a batch
+1. **Router Node**: Every 1 second, collects measurements from router and publishes as batches
+   - **CSI Mode**: Collects 5 CSI measurements for Angle of Arrival (AoA) analysis
+   - **FTM Mode**: Collects Fine Timing Measurements for Time of Flight (ToF) distance estimation
+   - **Both Mode**: Collects both CSI and FTM data in each batch
 2. **GPS Node**: Continuously publishes location data
 3. **Camera Node**: Captures images every ~5 seconds
 4. **Sync Node**: Matches batches with closest GPS/camera data within 2 second window
@@ -84,6 +101,8 @@ session_151552/
 ├── metadata.json           # Session info with GPS coordinates
 ├── rx_router_data/         # CSI measurement batches (JSON)
 │   └── batch*.json
+├── ftm_data/               # FTM measurement batches (JSON)
+│   └── batch*.json
 └── images/                 # Synchronized images
     └── *.jpg
 ```
@@ -91,7 +110,9 @@ session_151552/
 Each `metadata.json` entry contains:
 - Synchronized timestamp
 - GPS coordinates (lat, lon, alt)
-- Path to CSI batch file (5 measurements)
+- Data type (csi, ftm, or both)
+- Path to CSI batch file (if CSI collected)
+- Path to FTM batch file (if FTM collected)
 - Path to image
 
 ## Troubleshooting
