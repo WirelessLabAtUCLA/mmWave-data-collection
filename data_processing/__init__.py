@@ -13,13 +13,24 @@ from .session_data import (
     load_all_sessions
 )
 
+from .camera_tracking import (
+    HomographyCalibration,
+    HomographyCalibrator,
+    TXTracker,
+    visualize_tracking_results
+)
+
 __all__ = [
     'GPSCoordinate',
     'RouterMeasurement',
     'RouterBatch',
     'DataPoint',
     'SessionData',
-    'load_all_sessions',    
+    'load_all_sessions',
+    'HomographyCalibration',
+    'HomographyCalibrator',
+    'TXTracker',
+    'visualize_tracking_results',
 ]
 
 __version__ = '0.1.0'

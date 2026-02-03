@@ -8,6 +8,7 @@ dependencies = [
     "black>=26.1.0",
     "flake8>=7.3.0",
     "ipdb>=0.13.13",
+    "ipykernel>=7.1.0",
     "matplotlib>=3.10.0",
     "numpy>=2.4.1",
     "opencv-python>=4.13.0.90",
