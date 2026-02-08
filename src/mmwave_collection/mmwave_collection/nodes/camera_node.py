@@ -1,10 +1,39 @@
 #!/usr/bin/env python3
-"""Camera node - Capture images from webcam"""
+"""Camera node - Capture images from webcam
+
+This node supports two camera capture modes:
+
+1. Image Mode (default): Captures individual JPEG images and publishes them
+   via ROS2 topic /camera/image/compressed. Images are synced with sensor data
+   by sync_node.
+   
+2. Video Mode (video_mode=True): Records continuous video to an MP4 file.
+   - Video recording starts immediately when the node launches
+   - Recording continues until the node is shut down (Ctrl+C)
+   - On shutdown, publishes the video file path to /camera/video_path
+   - sync_node stores the video path in metadata.json
+   - No per-frame synchronization with sensor data (continuous recording)
+   
+Usage:
+  # Image mode (default):
+  ros2 launch mmwave_collection collection.launch.py
+  
+  # Video mode:
+  ros2 launch mmwave_collection collection.launch.py video_mode:=true
+  
+  # With custom video path and FPS:
+  ros2 run mmwave_collection camera_node --ros-args \\
+    -p video_mode:=true \\
+    -p video_path:=./my_videos \\
+    -p fps:=30
+"""
 import rclpy
 from rclpy.node import Node
 from sensor_msgs.msg import CompressedImage
-from std_msgs.msg import Empty
+from std_msgs.msg import Empty, String
 import cv2
+from pathlib import Path
+from datetime import datetime
 
 
 class CameraNode(Node):
@@ -18,6 +47,8 @@ class CameraNode(Node):
         self.declare_parameter('jpeg_quality', 85)
         self.declare_parameter('discrete_mode', False)  # New: discrete vs continuous
         self.declare_parameter('fps', 30)  # Target FPS for camera
+        self.declare_parameter('video_mode', False)  # New: video recording mode
+        self.declare_parameter('video_path', './data/videos')  # Path for video files
         
         # Get parameters
         device_id = self.get_parameter('device_id').value
@@ -26,9 +57,33 @@ class CameraNode(Node):
         self.jpeg_quality = self.get_parameter('jpeg_quality').value
         self.discrete_mode = self.get_parameter('discrete_mode').value
         fps = self.get_parameter('fps').value
+        self.video_mode = self.get_parameter('video_mode').value
+        video_path = self.get_parameter('video_path').value
         
-        # Publisher
+        # Store camera settings
+        self.width = width
+        self.height = height
+        self.fps = fps
+        
+        # Video recording setup
+        self.video_writer = None
+        self.video_file_path = None
+        self.recording = False
+        
+        if self.video_mode:
+            # Setup video directory
+            self.video_dir = Path(video_path)
+            self.video_dir.mkdir(parents=True, exist_ok=True)
+            
+            # Create video filename with timestamp
+            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+            self.video_file_path = self.video_dir / f'session_{timestamp}.mp4'
+        
+        # Publisher (for image mode)
         self.publisher = self.create_publisher(CompressedImage, '/camera/image/compressed', 10)
+        
+        # Video file path publisher (for video mode)
+        self.video_path_pub = self.create_publisher(String, '/camera/video_path', 10)
         
         # Trigger subscribers for discrete mode and automated collection
         self.trigger_sub = self.create_subscription(
@@ -72,27 +127,71 @@ class CameraNode(Node):
             for _ in range(5):
                 self.cap.read()
             
-            mode_str = "discrete" if self.discrete_mode else "continuous"
-            self.get_logger().info(f'Camera node started in {mode_str} mode (device {device_id})')
-            self.get_logger().info(f'Camera configured: {width}x{height} @ {fps}fps, buffer=1')
-            
-            # Timer for capture in continuous mode only
-            if not self.discrete_mode:
-                self.timer = self.create_timer(1.0, self.capture_image)  # 1Hz for continuous
+            if self.video_mode:
+                # Initialize video writer with H.264 codec
+                fourcc = cv2.VideoWriter_fourcc(*'mp4v')  # or 'avc1' for H.264
+                self.video_writer = cv2.VideoWriter(
+                    str(self.video_file_path),
+                    fourcc,
+                    fps,
+                    (width, height)
+                )
+                
+                if self.video_writer.isOpened():
+                    self.recording = True
+                    self.get_logger().info(f'Started video recording to {self.video_file_path}')
+                    self.get_logger().info(f'Video: {width}x{height} @ {fps}fps')
+                    
+                    # Start continuous recording timer
+                    self.timer = self.create_timer(1.0 / fps, self.record_frame)
+                else:
+                    self.get_logger().error('Failed to initialize video writer')
+                    self.video_mode = False
+            else:
+                mode_str = "discrete" if self.discrete_mode else "continuous"
+                self.get_logger().info(f'Camera node started in {mode_str} mode (device {device_id})')
+                self.get_logger().info(f'Camera configured: {width}x{height} @ {fps}fps, buffer=1')
+                
+                # Timer for capture in continuous mode only
+                if not self.discrete_mode:
+                    self.timer = self.create_timer(1.0, self.capture_image)  # 1Hz for continuous
         else:
             self.get_logger().error('Could not open any camera')
             self.cap = None
     
     def trigger_callback(self, msg):
         """Handle manual collection trigger (discrete mode)"""
-        if self.discrete_mode:
+        if self.discrete_mode and not self.video_mode:
             self.capture_image()
     
     def rotation_complete_callback(self, msg):
         """Handle rotation complete signal (automated collection)"""
-        if self.discrete_mode:
+        if self.discrete_mode and not self.video_mode:
             self.get_logger().info('Rotation complete, capturing image')
             self.capture_image()
+    
+    def record_frame(self):
+        """Record a frame to video file (video mode)"""
+        if not self.recording or self.video_writer is None:
+            return
+        
+        ret, frame = self.cap.read()
+        
+        if ret:
+            self.video_writer.write(frame)
+            # Log periodically (every 5 seconds)
+            if hasattr(self, '_frame_count'):
+                self._frame_count += 1
+            else:
+                self._frame_count = 1
+            
+            if self._frame_count % (self.fps * 5) == 0:  # Every 5 seconds
+                self.get_logger().info(
+                    f'Recording: {self._frame_count} frames ({self._frame_count / self.fps:.1f}s)',
+                    throttle_duration_sec=5.0
+                )
+        else:
+            self.get_logger().warn('Failed to capture frame for video recording')
     
     def capture_image(self):
         """Capture and publish image"""
@@ -141,6 +240,20 @@ class CameraNode(Node):
     
     def destroy_node(self):
         """Cleanup"""
+        if self.video_mode and self.recording:
+            self.get_logger().info('Stopping video recording...')
+            self.recording = False
+            
+            if self.video_writer:
+                self.video_writer.release()
+                self.get_logger().info(f'Video saved to {self.video_file_path}')
+                
+                # Publish video path for sync_node or other nodes
+                msg = String()
+                msg.data = str(self.video_file_path)
+                self.video_path_pub.publish(msg)
+                self.get_logger().info('Published video path')
+        
         if self.cap:
             self.cap.release()
         super().destroy_node()

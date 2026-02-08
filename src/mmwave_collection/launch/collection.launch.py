@@ -3,12 +3,9 @@ from launch import LaunchDescription
 from launch_ros.actions import Node
 from launch.actions import DeclareLaunchArgument
 from launch.substitutions import LaunchConfiguration
-import os
 
 
 def generate_launch_description():
-    # Get config file path
-    config_file = LaunchConfiguration('config', default='config/default_config.yaml')
     
     # Declare launch argument for discrete mode
     discrete_mode_arg = DeclareLaunchArgument(
@@ -24,12 +21,21 @@ def generate_launch_description():
         description='Collection mode: csi (AoA only), ftm (ToF only), or both (AoA+ToF)'
     )
     
+    # Declare launch argument for video mode
+    video_mode_arg = DeclareLaunchArgument(
+        'video_mode',
+        default_value='false',
+        description='Enable video recording mode (continuous video instead of individual images)'
+    )
+    
     discrete_mode = LaunchConfiguration('discrete_mode')
     collection_mode = LaunchConfiguration('collection_mode')
+    video_mode = LaunchConfiguration('video_mode')
     
     return LaunchDescription([
         discrete_mode_arg,
         collection_mode_arg,
+        video_mode_arg,
         
         # RX Router node
         Node(
@@ -81,6 +87,8 @@ def generate_launch_description():
                 'jpeg_quality': 85,
                 'fps': 30,  # Camera FPS (higher = lower latency)
                 'discrete_mode': discrete_mode,
+                'video_mode': video_mode,  # Enable video recording mode
+                'video_path': './data/videos',  # Path for video files
             }]
         ),
         
@@ -96,6 +104,7 @@ def generate_launch_description():
                 'organize_by_date': True,
                 'discrete_mode': discrete_mode,
                 'gps_required': False,  # GPS is optional
+                'video_mode': video_mode,  # Skip camera sync in video mode
             }]
         ),
     ])

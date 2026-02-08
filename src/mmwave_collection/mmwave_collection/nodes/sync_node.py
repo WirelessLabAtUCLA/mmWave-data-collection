@@ -24,6 +24,7 @@ class SyncNode(Node):
         self.declare_parameter('max_queue_size', 50)
         self.declare_parameter('discrete_mode', False)
         self.declare_parameter('gps_required', False)  # Make GPS optional
+        self.declare_parameter('video_mode', False)  # Video recording mode (no per-frame sync)
         
         # Get parameters
         data_path = self.get_parameter('data_path').value
@@ -32,6 +33,7 @@ class SyncNode(Node):
         max_queue_size = self.get_parameter('max_queue_size').value
         self.discrete_mode = self.get_parameter('discrete_mode').value
         self.gps_required = self.get_parameter('gps_required').value
+        self.video_mode = self.get_parameter('video_mode').value
         
         # Setup data directory
         self.data_root = Path(data_path)
@@ -46,7 +48,8 @@ class SyncNode(Node):
         self.metadata = {
             'session_id': self.session_dir.name,
             'start_time': datetime.now().isoformat(),
-            'data_points': []
+            'data_points': [],
+            'video_file': None  # Will be set if video recording is used
         }
         
         # Message buffers for manual synchronization (String messages don't have headers)
@@ -72,6 +75,10 @@ class SyncNode(Node):
         self.camera_sub = self.create_subscription(
             CompressedImage, '/camera/image/compressed', self.camera_callback, 10)
         
+        # Video path subscriber (for video recording mode)
+        self.video_path_sub = self.create_subscription(
+            String, '/camera/video_path', self.video_path_callback, 10)
+        
         # Timer for periodic synchronization attempts
         if self.discrete_mode:
             self.create_timer(0.1, self.try_sync_discrete)  # Try to sync every 100ms
@@ -84,7 +91,8 @@ class SyncNode(Node):
         
         mode_str = "discrete" if self.discrete_mode else "continuous"
         gps_str = "required" if self.gps_required else "optional"
-        self.get_logger().info(f'Sync node started in {mode_str} mode (GPS {gps_str}), saving to {self.session_dir}')
+        video_str = "video mode (no per-frame sync)" if self.video_mode else "image mode"
+        self.get_logger().info(f'Sync node started in {mode_str} mode (GPS {gps_str}, {video_str}), saving to {self.session_dir}')
     
     def _create_session_dir(self, organize_by_date: bool) -> Path:
         """Create session directory"""
@@ -135,6 +143,21 @@ class SyncNode(Node):
         # Camera messages have headers with timestamps
         ros_time = Time.from_msg(msg.header.stamp)
         self.camera_buffer.append((ros_time, msg))
+    
+    def video_path_callback(self, msg):
+        """Handle video file path from camera node"""
+        video_path = msg.data
+        self.get_logger().info(f'Received video file path: {video_path}')
+        
+        # Update metadata with video file path
+        self.metadata['video_file'] = video_path
+        
+        # Save metadata
+        metadata_file = self.session_dir / 'metadata.json'
+        with open(metadata_file, 'w') as f:
+            json.dump(self.metadata, f, indent=2)
+        
+        self.get_logger().info(f'Updated metadata with video file: {video_path}')
 
     def try_sync_discrete(self):
         """Synchronize messages in discrete mode"""
@@ -149,25 +172,28 @@ class SyncNode(Node):
             timeout_passed = time_since_csi > self.group_timeout
             
             if has_both or timeout_passed:
-                # We have at least CSI, check for camera
-                if not self.camera_buffer:
-                    return
+                # In video mode, skip camera sync requirement
+                if not self.video_mode:
+                    # We have at least CSI, check for camera
+                    if not self.camera_buffer:
+                        return
                 
                 # Use CSI time as the reference time
                 router_time = self.pending_csi_time
                 
-                # Find closest camera
+                # Find closest camera (only if not in video mode)
                 camera_match = None
-                min_camera_diff = float('inf')
-                
-                for k, (camera_time, camera_msg) in enumerate(self.camera_buffer):
-                    time_diff = abs((router_time - camera_time).nanoseconds / 1e9)
-                    if time_diff < min_camera_diff:
-                        min_camera_diff = time_diff
-                        camera_match = camera_msg
-                
-                if camera_match is None:
-                    return
+                if not self.video_mode:
+                    min_camera_diff = float('inf')
+                    
+                    for k, (camera_time, camera_msg) in enumerate(self.camera_buffer):
+                        time_diff = abs((router_time - camera_time).nanoseconds / 1e9)
+                        if time_diff < min_camera_diff:
+                            min_camera_diff = time_diff
+                            camera_match = camera_msg
+                    
+                    if camera_match is None:
+                        return
                 
                 # Find GPS if available
                 gps_match = None
@@ -200,7 +226,8 @@ class SyncNode(Node):
             return
         
         # In discrete mode, check what data we have
-        if not self.camera_buffer:
+        # Skip camera check if in video mode
+        if not self.video_mode and not self.camera_buffer:
             return
         
         # GPS handling: only require if gps_required is True
@@ -234,15 +261,16 @@ class SyncNode(Node):
             camera_match = None
             min_camera_diff = float('inf')
             
-            for k, (camera_time, camera_msg) in enumerate(self.camera_buffer):
-                time_diff = abs((router_time - camera_time).nanoseconds / 1e9)
-                if time_diff < min_camera_diff:
-                    min_camera_diff = time_diff
-                    camera_match = camera_msg
-            
-            if camera_match is None:
-                # No camera data available, skip this router message for now
-                continue
+            if not self.video_mode:
+                for k, (camera_time, camera_msg) in enumerate(self.camera_buffer):
+                    time_diff = abs((router_time - camera_time).nanoseconds / 1e9)
+                    if time_diff < min_camera_diff:
+                        min_camera_diff = time_diff
+                        camera_match = camera_msg
+                
+                if camera_match is None:
+                    # No camera data available, skip this router message for now
+                    continue
             
             # Found a match! Process it
             if gps_match:
@@ -260,9 +288,20 @@ class SyncNode(Node):
 
     def try_sync(self):
         """Periodi[cally try to synchronize messages from all three sources"""
-        # Need at least one message from each source
-        if not self.router_buffer or not self.gps_buffer or not self.camera_buffer:
-            return
+        # In video mode, only need router and optionally GPS
+        if self.video_mode:
+            if not self.router_buffer:
+                return
+            # GPS optional in video mode
+            if self.gps_required and not self.gps_buffer:
+                return
+        else:
+            # In image mode, need at least router and camera
+            if not self.router_buffer or not self.camera_buffer:
+                return
+            # GPS optional in image mode too
+            if self.gps_required and not self.gps_buffer:
+                return
         
         # Try to find a matching set within time tolerance
         for i, (router_time, router_msg) in enumerate(self.router_buffer):
@@ -278,23 +317,24 @@ class SyncNode(Node):
                     gps_match = gps_msg
                     gps_idx = j
             
-            if gps_match is None:
+            if gps_match is None and self.gps_required:
                 continue
             
-            # Find closest camera message
+            # Find closest camera message (skip if in video mode)
             camera_match = None
             camera_idx = None
             min_camera_diff = float('inf')
             
-            for k, (camera_time, camera_msg) in enumerate(self.camera_buffer):
-                time_diff = abs((router_time - camera_time).nanoseconds / 1e9)
-                if time_diff < min_camera_diff and time_diff < self.time_tolerance:
-                    min_camera_diff = time_diff
-                    camera_match = camera_msg
-                    camera_idx = k
-            
-            if camera_match is None:
-                continue
+            if not self.video_mode:
+                for k, (camera_time, camera_msg) in enumerate(self.camera_buffer):
+                    time_diff = abs((router_time - camera_time).nanoseconds / 1e9)
+                    if time_diff < min_camera_diff and time_diff < self.time_tolerance:
+                        min_camera_diff = time_diff
+                        camera_match = camera_msg
+                        camera_idx = k
+                
+                if camera_match is None:
+                    continue
             
             # Found a match! Process it
             self.process_synced_data(router_msg, gps_match, camera_match)
@@ -367,9 +407,12 @@ class SyncNode(Node):
                 'count': ftm_count
             }, f, indent=2)
         
-        # Save image
-        image_file = self.session_dir / 'images' / f'{timestamp_str}.jpg'
-        image_file.write_bytes(bytes(camera_msg.data))
+        # Save image (only if camera_msg is provided)
+        if camera_msg:
+            image_file = self.session_dir / 'images' / f'{timestamp_str}.jpg'
+            image_file.write_bytes(bytes(camera_msg.data))
+        else:
+            image_file = None
         
         # Record metadata with both CSI and FTM in single data point
         data_point = {
@@ -389,9 +432,12 @@ class SyncNode(Node):
                 'batch_id': ftm_batch_id,
                 'measurement_count': ftm_count,
                 'file': str(ftm_file.relative_to(self.session_dir))
-            },
-            'image': str(image_file.relative_to(self.session_dir))
+            }
         }
+        
+        # Add image field only if we have one
+        if image_file:
+            data_point['image'] = str(image_file.relative_to(self.session_dir))
         
         self.metadata['data_points'].append(data_point)
         
@@ -458,9 +504,12 @@ class SyncNode(Node):
                 'count': measurement_count
             }, f, indent=2)
         
-        # Save image
-        image_file = self.session_dir / 'images' / f'{timestamp_str}.jpg'
-        image_file.write_bytes(bytes(camera_msg.data))
+        # Save image (only if camera_msg is provided)
+        if camera_msg:
+            image_file = self.session_dir / 'images' / f'{timestamp_str}.jpg'
+            image_file.write_bytes(bytes(camera_msg.data))
+        else:
+            image_file = None
         
         # Record metadata
         data_point = {
@@ -476,9 +525,12 @@ class SyncNode(Node):
                 'batch_id': batch_id,
                 'measurement_count': measurement_count,
                 'file': str(data_file.relative_to(self.session_dir))
-            },
-            'image': str(image_file.relative_to(self.session_dir))
+            }
         }
+        
+        # Add image field only if we have one
+        if image_file:
+            data_point['image'] = str(image_file.relative_to(self.session_dir))
         
         self.metadata['data_points'].append(data_point)
         
