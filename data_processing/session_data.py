@@ -239,6 +239,14 @@ class FTMMeasurement:
             RTT in picoseconds
         """
         return (self.t4 - self.t1) - (self.t3 - self.t2)
+    
+    def calculate_distance(self) -> float:
+        """Calculate distance in meters.
+        
+        Returns:
+            Distance in meters
+        """
+        return 3e8 * self.calculate_rtt() / 2
 
 
 @dataclass
@@ -304,6 +312,17 @@ class FTMBatch:
             return np.array([])
         
         return np.array([m.calculate_rtt() for m in self.measurements], dtype=np.int64)
+    
+    def get_all_distance(self) -> np.ndarray:
+        """Get all distance values as a numpy array.
+        
+        Returns:
+            Numpy array of distance values in meters
+        """
+        if not self.measurements:
+            return np.array([])
+        
+        return np.array([m.calculate_distance() for m in self.measurements], dtype=np.float64)
 
 
 @dataclass
@@ -546,105 +565,47 @@ class SessionData:
             ftm_batch = data_point.load_ftm_batch(self.session_dir)
             self.ftm_batches.append(ftm_batch)
         return self.ftm_batches
-    
-    def get_ftm_data(self, target_size: Optional[int] = None) -> np.ndarray:
-        """Get FTM data from all data points, padded to match CSI data size.
-        
-        Args:
-            target_size: Target number of measurements per batch. If None, will use
-                        the size from CSI data for each batch.
-        
+
+    def get_ftm_data(self) -> Dict[str, np.ndarray]:
+        """Get per-batch averaged FTM data, with linear interpolation for missing batches.
+
+        For each data point, if an FTM batch exists its RTT and distance
+        measurements are averaged into a single value.  If no FTM batch is
+        available for a data point, a placeholder of 0 is stored.  After all
+        batches are processed the zeros are filled in by linearly interpolating
+        between the surrounding valid (non-zero) values.  Leading / trailing
+        zeros (before the first or after the last valid measurement) are
+        clamped to the nearest valid value by np.interp.
+
         Returns:
-            Numpy array of shape (total_measurements, 4) containing [t1, t2, t3, t4].
-            If FTM data is missing or insufficient for a batch, fills with zeros.
+            Dictionary with keys:
+                'rtt'      – averaged RTT per batch in picoseconds (np.ndarray)
+                'distance' – averaged distance per batch in metres  (np.ndarray)
         """
-        all_ftm_data = []
-        
+        rtt_raw: List[float] = []
+        dist_raw: List[float] = []
+
         for dp in self.data_points:
-            # Load FTM batch if available
             ftm_batch = dp.load_ftm_batch(self.session_dir)
-            
-            # Determine target size for this batch
-            if target_size is None:
-                # Use CSI batch size as target
-                csi_batch = dp.load_router_batch(self.session_dir)
-                batch_target_size = len(csi_batch.csi_processed_data)
+            if ftm_batch is None or ftm_batch.count == 0:
+                rtt_raw.append(0.0)
+                dist_raw.append(0.0)
             else:
-                batch_target_size = target_size
-            
-            # Get FTM timestamps or create zeros
-            if ftm_batch is not None and ftm_batch.count > 0:
-                ftm_timestamps = ftm_batch.get_all_timestamps()
-                
-                # Pad or truncate to match target size
-                if len(ftm_timestamps) < batch_target_size:
-                    # Pad with zeros
-                    padding = np.zeros((batch_target_size - len(ftm_timestamps), 4), dtype=np.int64)
-                    ftm_timestamps = np.vstack([ftm_timestamps, padding])
-                elif len(ftm_timestamps) > batch_target_size:
-                    # Truncate
-                    ftm_timestamps = ftm_timestamps[:batch_target_size]
-            else:
-                # No FTM data, create all zeros
-                ftm_timestamps = np.zeros((batch_target_size, 4), dtype=np.int64)
-            
-            all_ftm_data.append(ftm_timestamps)
+                rtt_raw.append(float(np.mean(ftm_batch.get_all_rtt())))
+                dist_raw.append(float(np.mean(ftm_batch.get_all_distance())))
+
+        rtt_arr  = np.array(rtt_raw,  dtype=np.float64)
+        dist_arr = np.array(dist_raw, dtype=np.float64)
+
+        # Linearly interpolate over missing (zero) entries
+        indices = np.arange(len(rtt_arr))
+        for arr in (rtt_arr, dist_arr):
+            valid_mask = arr != 0.0
+            if valid_mask.any() and not valid_mask.all():
+                arr[:] = np.interp(indices, indices[valid_mask], arr[valid_mask])
+
+        return {"rtt": rtt_arr, "distance": dist_arr}
         
-        # Stack all batches
-        if all_ftm_data:
-            return np.vstack(all_ftm_data)
-        else:
-            return np.array([], dtype=np.int64).reshape(0, 4)
-    
-    def get_ftm_rtt_data(self, target_size: Optional[int] = None) -> np.ndarray:
-        """Get RTT (Round Trip Time) from FTM data, padded to match CSI data size.
-        
-        Args:
-            target_size: Target number of measurements per batch. If None, will use
-                        the size from CSI data for each batch.
-        
-        Returns:
-            Numpy array of RTT values in picoseconds.
-            If FTM data is missing or insufficient for a batch, fills with zeros.
-        """
-        all_rtt_data = []
-        
-        for dp in self.data_points:
-            # Load FTM batch if available
-            ftm_batch = dp.load_ftm_batch(self.session_dir)
-            
-            # Determine target size for this batch
-            if target_size is None:
-                # Use CSI batch size as target
-                csi_batch = dp.load_router_batch(self.session_dir)
-                batch_target_size = len(csi_batch.csi_processed_data)
-            else:
-                batch_target_size = target_size
-            
-            # Get RTT or create zeros
-            if ftm_batch is not None and ftm_batch.count > 0:
-                rtt_values = ftm_batch.get_all_rtt()
-                
-                # Pad or truncate to match target size
-                if len(rtt_values) < batch_target_size:
-                    # Pad with zeros
-                    padding = np.zeros(batch_target_size - len(rtt_values), dtype=np.int64)
-                    rtt_values = np.concatenate([rtt_values, padding])
-                elif len(rtt_values) > batch_target_size:
-                    # Truncate
-                    rtt_values = rtt_values[:batch_target_size]
-            else:
-                # No FTM data, create all zeros
-                rtt_values = np.zeros(batch_target_size, dtype=np.int64)
-            
-            all_rtt_data.append(rtt_values)
-        
-        # Stack all batches
-        if all_rtt_data:
-            return np.concatenate(all_rtt_data)
-        else:
-            return np.array([], dtype=np.int64)
-    
     def get_data_point(self, index: int) -> Optional[DataPoint]:
         """Get a data point by index."""
         for dp in self.data_points:
