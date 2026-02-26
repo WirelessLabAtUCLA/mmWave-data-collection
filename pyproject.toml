@@ -7,6 +7,7 @@ requires-python = ">=3.12"
 dependencies = [
     "black>=26.1.0",
     "flake8>=7.3.0",
+    "h5py>=3.15.1",
     "ipdb>=0.13.13",
     "ipykernel>=7.1.0",
     "matplotlib>=3.10.0",
@@ -20,4 +21,5 @@ dependencies = [
     "pyyaml>=6.0.3",
     "scipy>=1.17.0",
     "textual>=7.4.0",
+    "tqdm>=4.67.3",
 ]

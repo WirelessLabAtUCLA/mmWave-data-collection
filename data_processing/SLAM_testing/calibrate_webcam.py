@@ -11,15 +11,76 @@ import yaml
 import os
 
 # ==============================================================================
+# HELPER FUNCTIONS
+# ==============================================================================
+
+def segment_checkerboard(img):
+    """
+    Perform color segmentation to extract checkerboard region and remove background artifacts
+    
+    This function:
+    1. Converts image to HSV color space for better color segmentation
+    2. Detects black squares using HSV thresholding
+    3. Uses edge detection to find the paper boundary
+    4. Combines these to isolate just the checkerboard pattern
+    5. Removes background to make the board more visible
+    
+    Args:
+        img: Input BGR image
+        
+    Returns:
+        Segmented image with background removed
+    """
+    # Convert to HSV color space and grayscale
+    hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    
+    # Step 1: Detect black squares (low V value in HSV)
+    lower_black = np.array([0, 0, 0])
+    upper_black = np.array([180, 255, 100])
+    mask_black = cv2.inRange(hsv, lower_black, upper_black)
+    
+    # Step 2: Use edge detection to find checkerboard/paper boundaries
+    edges = cv2.Canny(gray, 50, 150)
+    
+    # Dilate edges to connect nearby edges
+    kernel_dilate = np.ones((3, 3), np.uint8)
+    edges_dilated = cv2.dilate(edges, kernel_dilate, iterations=2)
+    
+    # Find contours to locate the paper/checkerboard
+    contours, _ = cv2.findContours(edges_dilated, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+    
+    # Create mask for the largest rectangular contour (the paper)
+    mask_paper = np.zeros(gray.shape, dtype=np.uint8)
+    if contours:
+        largest_contour = max(contours, key=cv2.contourArea)
+        cv2.drawContours(mask_paper, [largest_contour], -1, 255, -1)
+    
+    # Step 3: Combine black squares detection with paper boundary
+    mask_combined = cv2.bitwise_and(mask_black, mask_paper)
+    
+    # Apply morphological operations to clean up noise
+    kernel_open = np.ones((3, 3), np.uint8)
+    kernel_close = np.ones((7, 7), np.uint8)
+    mask_combined = cv2.morphologyEx(mask_combined, cv2.MORPH_OPEN, kernel_open)
+    mask_combined = cv2.morphologyEx(mask_combined, cv2.MORPH_CLOSE, kernel_close)
+    
+    # Create result with white background outside paper
+    result = img.copy()
+    result[mask_paper == 0] = [255, 255, 255]
+    
+    return result
+
+# ==============================================================================
 # CONFIGURATION - UPDATE THESE VALUES FOR YOUR CHECKERBOARD
 # ==============================================================================
 
 # Checkerboard dimensions (number of INNER corners)
-# For a standard 9x7 checkerboard, use (8, 6) - that's corners, not squares!
-CHECKERBOARD_SIZE = (8, 6)  # (columns, rows) of inner corners
+# For a 6x7 checkerboard (6 columns x 7 rows of squares), use (5, 6) inner corners
+CHECKERBOARD_SIZE = (5, 6)  # (columns, rows) of inner corners
 
 # Size of each square in mm (measure with a ruler!)
-SQUARE_SIZE = 20.47# millimeters
+SQUARE_SIZE = 20.48# millimeters
 
 # Directory containing calibration images
 IMAGE_DIR = "calibration_images"
@@ -70,13 +131,22 @@ def calibrate_camera(images_path, checkerboard_size, square_size):
     
     for idx, fname in enumerate(images):
         img = cv2.imread(fname)
-        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        
+        # Apply color segmentation to remove background artifacts
+        img_segmented = segment_checkerboard(img)
+        
+        # Resize if needed for faster processing
+        img_segmented = cv2.resize(img_segmented, (int(img_segmented.shape[1]/2), int(img_segmented.shape[0]/2)))
+        gray = cv2.cvtColor(img_segmented, cv2.COLOR_BGR2GRAY)
         
         if img_shape is None:
             img_shape = gray.shape[::-1]  # (width, height)
         
-        # Find the checkerboard corners
-        ret, corners = cv2.findChessboardCorners(gray, checkerboard_size, None)
+        # Find the checkerboard corners with flags for better detection
+        flags = (cv2.CALIB_CB_ADAPTIVE_THRESH + 
+                 cv2.CALIB_CB_NORMALIZE_IMAGE + 
+                 cv2.CALIB_CB_FAST_CHECK)
+        ret, corners = cv2.findChessboardCorners(gray, checkerboard_size, flags)
         
         # If found, add object points and image points
         if ret:
@@ -90,8 +160,8 @@ def calibrate_camera(images_path, checkerboard_size, square_size):
             print(f"✓ Image {idx + 1}/{len(images)}: {os.path.basename(fname)} - Checkerboard detected")
             
             # Optional: Draw and display the corners (uncomment to visualize)
-            cv2.drawChessboardCorners(img, checkerboard_size, corners_refined, ret)
-            cv2.imshow('Checkerboard', img)
+            cv2.drawChessboardCorners(img_segmented, checkerboard_size, corners_refined, ret)
+            cv2.imshow('Checkerboard', img_segmented)
             cv2.waitKey(100)
         else:
             print(f"✗ Image {idx + 1}/{len(images)}: {os.path.basename(fname)} - Checkerboard NOT detected")
@@ -100,10 +170,10 @@ def calibrate_camera(images_path, checkerboard_size, square_size):
     
     print(f"\nSuccessfully processed {successful_images}/{len(images)} images")
     
-    # if successful_images < 10:
-    #     print("\n⚠ Warning: Less than 10 successful images. Calibration may be inaccurate.")
-    #     print("   Capture more images with the checkerboard clearly visible.")
-    #     return None, None, None, None
+    if successful_images < 10:
+        print("\n⚠ Warning: Less than 10 successful images. Calibration may be inaccurate.")
+        print("   Capture more images with the checkerboard clearly visible.")
+        return None, None, None, None
     
     # Perform camera calibration
     print("\nPerforming camera calibration...")

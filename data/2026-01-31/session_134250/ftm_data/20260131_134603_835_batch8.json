@@ -1,9 +1,0 @@
-{
-  "data_type": "ftm",
-  "batch_id": 8,
-  "timestamp": "2026-01-31T13:46:03.835857",
-  "measurements": [
-    "[ 7530.925507] wil6210 0000:01:00.0 wlan0: wil_ftm_evt_per_dest_res: [FTM] Measurement: 12667518876, 22546842396, 22555987968, 12678544128"
-  ],
-  "count": 1
-}

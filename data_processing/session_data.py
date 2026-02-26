@@ -546,6 +546,8 @@ class SessionData:
             if averaged:
                 csi_data = dp.router_batch.averaged_csi_data
             else:
+                if dp.router_batch is None:
+                    continue
                 csi_data = dp.router_batch.csi_processed_data
             channel_data = np.vstack((channel_data, csi_data))
         return channel_data[1:, :]
@@ -635,6 +637,38 @@ class SessionData:
     def get_image_paths(self) -> List[Path]:
         """Get list of all image paths."""
         return [dp.image_path for dp in self.data_points if dp.image_path]
+
+    def get_expanded_data_for_ml(self) -> tuple:
+        """Get timestamps, CSI data, and image paths expanded to match individual CSI samples.
+
+        Each batch may have a different number of CSI samples. This method expands
+        the timestamps and image paths so each CSI sample gets the timestamp and
+        image from its batch.
+
+        Returns:
+            Tuple of (timestamps, csi_data, image_paths) where all have the same length.
+            Requires load_all_router_batches() to have been called first.
+        """
+        expanded_timestamps = []
+        expanded_image_paths = []
+        all_csi_data = []
+
+        for dp in self.data_points:
+            if dp.router_batch is None:
+                continue
+
+            csi_data = dp.router_batch.csi_processed_data
+            num_samples = len(csi_data)
+            if num_samples == 0:
+                continue
+
+            expanded_timestamps.extend([dp.timestamp] * num_samples)
+            expanded_image_paths.extend([dp.image_path] * num_samples)
+            all_csi_data.append(csi_data)
+
+        csi_array = np.vstack(all_csi_data) if all_csi_data else np.array([])
+
+        return expanded_timestamps, csi_array, expanded_image_paths
 
     def get_save_plot_path(self) -> Path:
         """Get the path to save the plot."""

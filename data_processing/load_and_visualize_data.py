@@ -2,7 +2,7 @@
 from session_data import *
 from visualize import *
 
-session_dir = Path("../data/2026-02-08/session_121146")
+session_dir = Path("../data/2025-11-25/session_122307")
 auto_clean_session(session_dir)
 
 session = SessionData.from_directory(session_dir)
