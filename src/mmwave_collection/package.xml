@@ -3,7 +3,7 @@
 <package format="3">
   <name>mmwave_collection</name>
   <version>1.0.0</version>
-  <description>mmWave data collection with GPS and camera</description>
+  <description>mmWave data collection with RealSense D455 and SLAM</description>
   <maintainer email="user@example.com">User</maintainer>
   <license>MIT</license>
 
@@ -11,7 +11,7 @@
   <depend>sensor_msgs</depend>
   <depend>std_msgs</depend>
   <depend>std_srvs</depend>
-  <depend>cv_bridge</depend>
+  <depend>nav_msgs</depend>
 
   <test_depend>pytest</test_depend>
 

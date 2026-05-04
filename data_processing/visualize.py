@@ -207,66 +207,75 @@ def plot_animation_of_beamformer(session: SessionData, save_path: Path = None, p
     print(f"Animation saved successfully to: {session.get_save_plot_path() / save_path}")
 
 def plot_ftm_timeseries(session: SessionData, save_path: Path = None):
-    """Plot FTM timeseries.
-    
+    """Plot FTM RTT and distance timeseries.
+
     Args:
         session: SessionData object
         save_path: Optional path to save the figure
     """
     ftm_data = session.get_ftm_data()
-    plt.figure(figsize=(12, 8))
-    plt.plot(np.mean(ftm_data, axis=1))
-    plt.xlabel('Sample Index')
-    plt.ylabel('Time (ns)')
-    plt.title(f'FTM Timeseries - {session.session_id}')
-    plt.show()
+    indices = np.arange(len(ftm_data['rtt']))
+
+    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(12, 8), sharex=True)
+
+    ax1.plot(indices, ftm_data['rtt'], linewidth=1.5)
+    ax1.set_ylabel('RTT (ps)')
+    ax1.set_title(f'FTM Timeseries - {session.session_id}')
+    ax1.grid(True, alpha=0.3)
+
+    ax2.plot(indices, ftm_data['distance'], linewidth=1.5, color='tab:orange')
+    ax2.set_xlabel('Batch Index')
+    ax2.set_ylabel('Distance (m)')
+    ax2.set_title('FTM Distance')
+    ax2.grid(True, alpha=0.3)
+
+    plt.tight_layout()
     if save_path:
         plt.savefig(save_path, dpi=150, bbox_inches='tight')
         print(f"FTM timeseries plot saved to: {save_path}")
+    else:
+        plt.show()
 
-def plot_gps_trajectory(session: SessionData, save_path: Path = None):
-    """Plot GPS trajectory on a 2D map.
-    
+def plot_slam_trajectory(session: SessionData, save_path: Path = None):
+    """Plot SLAM XY trajectory in metres.
+
+    Left panel: top-down XY path coloured by data-point index.
+    Right panel: Z (height) profile over time.
+
     Args:
         session: SessionData object
         save_path: Optional path to save the figure
     """
-    trajectory = session.get_gps_trajectory()
-    
-    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(14, 6))
-    
-    # 2D trajectory
-    scatter = ax1.scatter(trajectory[:, 1], trajectory[:, 0], 
-                         c=range(len(trajectory)), cmap='viridis', 
-                         s=50, alpha=0.6)
-    ax1.plot(trajectory[:, 1], trajectory[:, 0], 'k-', alpha=0.3, linewidth=1)
-    ax1.set_xlabel('Longitude')
-    ax1.set_ylabel('Latitude')
-    ax1.set_title(f'GPS Trajectory - {session.session_id}')
-    ax1.grid(True, alpha=0.3)
-    plt.colorbar(scatter, ax=ax1, label='Data Point Index')
-    
-    # Mark start and end
-    ax1.plot(trajectory[0, 1], trajectory[0, 0], 'go', markersize=10, 
-             label='Start', zorder=5)
-    ax1.plot(trajectory[-1, 1], trajectory[-1, 0], 'ro', markersize=10, 
-             label='End', zorder=5)
-    ax1.legend()
-    
-    # Altitude profile
+    trajectory = session.get_slam_trajectory()
+
+    if len(trajectory) == 0:
+        print("No SLAM pose data available in this session. "
+              "Was RTAB-Map running during collection?")
+        return
+
     indices = np.arange(len(trajectory))
-    ax2.plot(indices, trajectory[:, 2], 'b-', linewidth=2)
-    ax2.fill_between(indices, trajectory[:, 2], alpha=0.3)
-    ax2.set_xlabel('Data Point Index')
-    ax2.set_ylabel('Altitude (m)')
-    ax2.set_title('Altitude Profile')
-    ax2.grid(True, alpha=0.3)
-    
+
+    fig = plt.figure(figsize=(14, 6))
+
+    # Top-down XY trajectory
+    scatter = plt.scatter(trajectory[:, 0], trajectory[:, 2],
+                          c=indices, cmap='viridis', s=50, alpha=0.7)
+    plt.plot(trajectory[:, 0], trajectory[:, 2], 'k-', alpha=0.25, linewidth=1)
+    plt.plot(trajectory[0, 0], trajectory[0, 2], 'go',
+             markersize=10, label='Start', zorder=5)
+    plt.plot(trajectory[-1, 0], trajectory[-1, 2], 'ro',
+             markersize=10, label='End', zorder=5)
+    plt.xlabel('X (m)')
+    plt.ylabel('Y (m)')
+    plt.title(f'SLAM Trajectory - {session.session_id}')
+    plt.grid(True, alpha=0.3)
+    plt.legend()
+    plt.colorbar(scatter, label='Data Point Index')
     plt.tight_layout()
-    
+
     if save_path:
         plt.savefig(save_path, dpi=150, bbox_inches='tight')
-        print(f"GPS trajectory plot saved to: {save_path}")
+        print(f"SLAM trajectory plot saved to: {save_path}")
     else:
         plt.show()
 
@@ -369,8 +378,8 @@ def create_all_plots(session: SessionData, output_dir: Path, include_animation: 
     print(f"Creating visualizations for {session.session_id}...")
     print("-" * 60)
     
-    # GPS trajectory
-    plot_gps_trajectory(session, output_dir / 'gps_trajectory.png')
+    # SLAM trajectory
+    plot_slam_trajectory(session, output_dir / 'slam_trajectory.png')
     
     # CSI phase data
     plot_csi_phase_data(session, output_dir / 'csi_phase_data.png')
@@ -608,7 +617,7 @@ if __name__ == "__main__":
     # create_all_plots(session, output_dir, include_animation=True)
     
     # Or create individual plots
-    plot_gps_trajectory(session)
+    plot_slam_trajectory(session)
     plot_temporal_analysis(session)
     plot_csi_phase_data(session)
     

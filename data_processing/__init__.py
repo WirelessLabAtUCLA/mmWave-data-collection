@@ -5,7 +5,7 @@ This package provides classes for reading and processing mmWave data collection 
 """
 
 from .session_data import (
-    GPSCoordinate,
+    SlamPose,
     RouterMeasurement,
     RouterBatch,
     DataPoint,
@@ -21,7 +21,7 @@ from .camera_tracking import (
 )
 
 __all__ = [
-    'GPSCoordinate',
+    'SlamPose',
     'RouterMeasurement',
     'RouterBatch',
     'DataPoint',

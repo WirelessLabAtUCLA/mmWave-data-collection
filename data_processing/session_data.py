@@ -16,28 +16,36 @@ from utils import process_csi_data
 FREQ_CHANNELS = {1 : 58.32, 2 : 60.48, 3 : 62.64, 4 : 64.8}
 
 @dataclass
-class GPSCoordinate:
-    """GPS coordinate data."""
-    latitude: float
-    longitude: float
-    altitude: float
-    
+class SlamPose:
+    """6-DOF pose from RTAB-Map visual-inertial odometry.
+
+    Position is in metres relative to the SLAM map origin.
+    Orientation is a unit quaternion (x, y, z, w).
+    """
+    x: float
+    y: float
+    z: float
+    qx: float
+    qy: float
+    qz: float
+    qw: float
+
     @classmethod
-    def from_dict(cls, data: Dict[str, float]) -> 'GPSCoordinate':
-        """Create GPSCoordinate from dictionary."""
+    def from_dict(cls, data: Dict[str, float]) -> 'SlamPose':
         return cls(
-            latitude=data['latitude'],
-            longitude=data['longitude'],
-            altitude=data['altitude']
+            x=data['x'], y=data['y'], z=data['z'],
+            qx=data['qx'], qy=data['qy'], qz=data['qz'], qw=data['qw'],
         )
-    
+
     def to_dict(self) -> Dict[str, float]:
-        """Convert to dictionary."""
         return {
-            'latitude': self.latitude,
-            'longitude': self.longitude,
-            'altitude': self.altitude
+            'x': self.x, 'y': self.y, 'z': self.z,
+            'qx': self.qx, 'qy': self.qy, 'qz': self.qz, 'qw': self.qw,
         }
+
+    def xy(self) -> tuple:
+        """Return (x, y) position in metres."""
+        return (self.x, self.y)
 
 
 @dataclass
@@ -427,63 +435,76 @@ class DataPoint:
     """Single data point in a session."""
     index: int
     timestamp: datetime
-    gps: GPSCoordinate
+    slam_pose: Optional[SlamPose]  # None when RTAB-Map was not running during collection
     router_batch_info: Dict[str, Any]
     ftm_batch_info: Optional[Dict[str, Any]] = None
     image_path: Optional[Path] = None
     router_batch: Optional[RouterBatch] = None
     ftm_batch: Optional[FTMBatch] = None
-    
+
     @classmethod
     def from_dict(cls, data: Dict[str, Any], session_dir: Path) -> 'DataPoint':
         """Create DataPoint from dictionary.
-        
-        Handles both old format (router_batch) and new format (csi_batch + ftm_batch).
+
+        Handles:
+          - New format: slam_pose (dict or null) + router_batch
+          - Old format: gps dict + csi_batch/router_batch (GPS mapped to XY for
+            backward compatibility; lon→x, lat→y, alt→z with identity orientation)
         """
-        # Handle backward compatibility: older sessions use 'router_batch', newer use 'csi_batch'
         router_batch_info = data.get('csi_batch') or data.get('router_batch')
         ftm_batch_info = data.get('ftm_batch')
-        
+
+        slam_pose: Optional[SlamPose] = None
+        raw_pose = data.get('slam_pose')
+        if raw_pose:
+            slam_pose = SlamPose.from_dict(raw_pose)
+        elif 'gps' in data and data['gps']:
+            gps = data['gps']
+            slam_pose = SlamPose(
+                x=float(gps.get('longitude', 0.0)),
+                y=float(gps.get('latitude', 0.0)),
+                z=float(gps.get('altitude', 0.0)),
+                qx=0.0, qy=0.0, qz=0.0, qw=1.0,
+            )
+
         return cls(
             index=data['index'],
             timestamp=datetime.fromisoformat(data['timestamp']),
-            gps=GPSCoordinate.from_dict(data['gps']),
+            slam_pose=slam_pose,
             router_batch_info=router_batch_info,
             ftm_batch_info=ftm_batch_info,
             image_path=session_dir / data['image'] if 'image' in data else None,
-            router_batch=None,  # Loaded lazily
-            ftm_batch=None  # Loaded lazily
+            router_batch=None,
+            ftm_batch=None,
         )
-    
+
     def load_router_batch(self, session_dir: Path) -> RouterBatch:
         """Load the associated router batch data."""
         if self.router_batch is None:
             batch_file = session_dir / self.router_batch_info['file']
             self.router_batch = RouterBatch.from_file(batch_file)
         return self.router_batch
-    
+
     def load_ftm_batch(self, session_dir: Path) -> Optional[FTMBatch]:
         """Load the associated FTM batch data if it exists."""
         if self.ftm_batch_info is None:
             return None
-        
         if self.ftm_batch is None:
             batch_file = session_dir / self.ftm_batch_info['file']
             if batch_file.exists():
                 self.ftm_batch = FTMBatch.from_file(batch_file)
             else:
-                # File doesn't exist, return None
                 return None
         return self.ftm_batch
-    
+
     def to_dict(self) -> Dict[str, Any]:
         """Convert to dictionary."""
         result = {
             'index': self.index,
             'timestamp': self.timestamp.isoformat(),
-            'gps': self.gps.to_dict(),
+            'slam_pose': self.slam_pose.to_dict() if self.slam_pose else None,
             'router_batch_info': self.router_batch_info,
-            'image_path': str(self.image_path) if self.image_path else None
+            'image_path': str(self.image_path) if self.image_path else None,
         }
         if self.ftm_batch_info is not None:
             result['ftm_batch_info'] = self.ftm_batch_info
@@ -528,15 +549,20 @@ class SessionData:
             for dp in metadata['data_points']
         ]
         
+        # end_time and total_samples are written on clean shutdown; fall back
+        # gracefully for sessions that were interrupted mid-collection.
+        end_time_str = metadata.get('end_time') or metadata['start_time']
+        total_samples = metadata.get('total_samples', len(data_points))
+
         return cls(
             session_id=metadata['session_id'],
             start_time=datetime.fromisoformat(metadata['start_time']),
-            end_time=datetime.fromisoformat(metadata['end_time']),
-            total_samples=metadata['total_samples'],
+            end_time=datetime.fromisoformat(end_time_str),
+            total_samples=total_samples,
             data_points=data_points,
             session_dir=session_dir,
             metadata=metadata,
-            frequency=FREQ_CHANNELS[channel]
+            frequency=FREQ_CHANNELS[channel],
         )
 
     def get_csi_data(self, averaged: bool = False) -> np.ndarray:
@@ -615,16 +641,18 @@ class SessionData:
                 return dp
         return None
     
-    def get_gps_trajectory(self) -> np.ndarray:
-        """Get GPS trajectory as numpy array [lat, lon, alt]."""
-        trajectory = []
-        for dp in self.data_points:
-            trajectory.append([
-                dp.gps.latitude,
-                dp.gps.longitude,
-                dp.gps.altitude
-            ])
-        return np.array(trajectory)
+    def get_slam_trajectory(self) -> np.ndarray:
+        """Get SLAM trajectory as numpy array of shape (N, 3) with columns [x, y, z] in metres.
+
+        Only data points that have a valid SLAM pose are included.
+        Returns an empty array if no pose data was recorded (e.g. RTAB-Map was not running).
+        """
+        trajectory = [
+            [dp.slam_pose.x, dp.slam_pose.y, dp.slam_pose.z]
+            for dp in self.data_points
+            if dp.slam_pose is not None
+        ]
+        return np.array(trajectory) if trajectory else np.empty((0, 3))
     
     def get_timestamps(self) -> List[datetime]:
         """Get list of all timestamps."""
@@ -639,18 +667,22 @@ class SessionData:
         return [dp.image_path for dp in self.data_points if dp.image_path]
 
     def get_expanded_data_for_ml(self) -> tuple:
-        """Get timestamps, CSI data, and image paths expanded to match individual CSI samples.
+        """Get timestamps, CSI data, image paths, and pose data expanded to match individual CSI samples.
 
         Each batch may have a different number of CSI samples. This method expands
-        the timestamps and image paths so each CSI sample gets the timestamp and
-        image from its batch.
+        the timestamps, image paths, and pose (x, y, z) so each CSI sample gets the
+        values from its batch.
 
         Returns:
-            Tuple of (timestamps, csi_data, image_paths) where all have the same length.
+            Tuple of (timestamps, csi_data, image_paths, positions) where all have the
+            same length. ``positions`` is a numpy array of shape (N, 3) with columns
+            [x, y, z] in metres; rows are NaN when no SLAM pose was recorded for that
+            batch.
             Requires load_all_router_batches() to have been called first.
         """
         expanded_timestamps = []
         expanded_image_paths = []
+        expanded_positions = []
         all_csi_data = []
 
         for dp in self.data_points:
@@ -662,13 +694,20 @@ class SessionData:
             if num_samples == 0:
                 continue
 
+            if dp.slam_pose is not None:
+                pos = [dp.slam_pose.x, dp.slam_pose.y, dp.slam_pose.z]
+            else:
+                pos = [float('nan'), float('nan'), float('nan')]
+
             expanded_timestamps.extend([dp.timestamp] * num_samples)
             expanded_image_paths.extend([dp.image_path] * num_samples)
+            expanded_positions.extend([pos] * num_samples)
             all_csi_data.append(csi_data)
 
         csi_array = np.vstack(all_csi_data) if all_csi_data else np.array([])
+        positions_array = np.array(expanded_positions, dtype=np.float64) if expanded_positions else np.empty((0, 3))
 
-        return expanded_timestamps, csi_array, expanded_image_paths
+        return expanded_timestamps, csi_array, expanded_image_paths, positions_array
 
     def get_save_plot_path(self) -> Path:
         """Get the path to save the plot."""
@@ -679,10 +718,18 @@ class SessionData:
     def summary(self) -> str:
         """Get a summary string of the session."""
         duration = self.get_duration()
-        
-        # Count data points with FTM data
         ftm_count = sum(1 for dp in self.data_points if dp.ftm_batch_info is not None)
-        
+        pose_count = sum(1 for dp in self.data_points if dp.slam_pose is not None)
+
+        trajectory = self.get_slam_trajectory()
+        if len(trajectory) >= 2:
+            total_dist = float(np.sum(np.linalg.norm(np.diff(trajectory[:, :2], axis=0), axis=1)))
+            pose_str = f"{pose_count}/{len(self.data_points)} points | dist ≈ {total_dist:.2f} m"
+        elif pose_count > 0:
+            pose_str = f"{pose_count}/{len(self.data_points)} points"
+        else:
+            pose_str = "no pose data (RTAB-Map not running during collection)"
+
         return (
             f"Session: {self.session_id}\n"
             f"Start: {self.start_time}\n"
@@ -692,6 +739,7 @@ class SessionData:
             f"Data Points: {len(self.data_points)}\n"
             f"Data Points with FTM: {ftm_count}\n"
             f"Images: {len(self.get_image_paths())}\n"
+            f"SLAM Pose: {pose_str}\n"
         )
     
     def __repr__(self) -> str:

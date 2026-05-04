@@ -30,7 +30,7 @@ def extract_peak_theta(channel_data: np.ndarray) -> np.ndarray:
     return theta_peaks, peak_values
 
 
-session_dir = Path("../data/2025-11-18/session_152325")
+session_dir = Path("/home/kanishka/Projects/mmWave-datasets/raw/2025-11-18/session_152325")
 elevation_angle = np.deg2rad(3)
 theta_range = np.deg2rad([-95, 95])
 

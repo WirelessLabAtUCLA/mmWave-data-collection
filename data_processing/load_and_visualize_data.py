@@ -2,7 +2,7 @@
 from session_data import *
 from visualize import *
 
-session_dir = Path("../data/2026-03-17/session_142456")
+session_dir = Path("../data/2026-04-18/session_152316")
 auto_clean_session(session_dir)
 
 session = SessionData.from_directory(session_dir)
@@ -11,6 +11,7 @@ print(session.summary())
 
 # plot_csi_phase_data(session, averaged=False)
 # plot_animation_of_beamformer(session, plot_image=False, azimuth=True, averaged=True)
+plot_slam_trajectory(session, save_path=session.get_save_plot_path() / 'slam_trajectory.png')
 # plot_ftm_timeseries(session, save_path=session.get_save_plot_path() / 'ftm_timeseries.png')
-plot_csi_phase_data(session, save_path=session.get_save_plot_path() / 'csi_phase_data.png', averaged=False)
+# plot_csi_phase_data(session, save_path=session.get_save_plot_path() / 'csi_phase_data.png', averaged=False)
 

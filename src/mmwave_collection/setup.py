@@ -25,8 +25,7 @@ setup(
     entry_points={
         'console_scripts': [
             'router_node = mmwave_collection.nodes.router_node:main',
-            'gps_node = mmwave_collection.nodes.gps_node:main',
-            'camera_node = mmwave_collection.nodes.camera_node:main',
+            'realsense_node = mmwave_collection.nodes.realsense_node:main',
             'sync_node = mmwave_collection.nodes.sync_node:main',
             'rotation_table_node = mmwave_collection.nodes.rotation_table_node:main',
             'automated_collection_node = mmwave_collection.nodes.automated_collection_node:main',
