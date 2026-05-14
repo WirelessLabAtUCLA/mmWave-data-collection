@@ -1,0 +1,17 @@
+{
+  "data_type": "csi",
+  "batch_id": 0,
+  "timestamp": "2026-05-13T17:54:02.631463",
+  "measurements": [],
+  "count": 0,
+  "measurements_by_mac": [
+    {
+      "mac_address": "\\xf4\\x1e\\x57\\x64\\x92\\xae",
+      "data": []
+    },
+    {
+      "mac_address": "\\xf4\\x1e\\x57\\xa4\\x86\\x5f",
+      "data": []
+    }
+  ]
+}

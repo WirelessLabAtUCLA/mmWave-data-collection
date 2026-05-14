@@ -63,6 +63,7 @@ def generate_launch_description():
                 'username': 'root',
                 'key_file': '~/.ssh/id_ed25519',
                 'mac_address': '\\xf4\\x1e\\x57\\x64\\x92\\xae',
+                'mac_addresses': ['\\xf4\\x1e\\x57\\x64\\x92\\xae', '\\xf4\\x1e\\x57\\xa4\\x86\\x5f'],
                 'remote_file': '/tmp/csi_measurements.txt',
                 'remote_script': '/scripts/collect_csi.sh',
                 'measurements_per_batch': 100,

@@ -47,7 +47,8 @@ rx_router:
   username: "root"
   key_file: "~/.ssh/id_ed25519"
   collection_mode: "both"    # Options: 'csi', 'ftm', 'both'
-  mac_address: "\\xf4\\x1e\\x57\\x64\\x92\\xae"  # Target device MAC
+  mac_address: "\\xf4\\x1e\\x57\\x64\\x92\\xae"  # Target TX MAC when mac_addresses is empty
+  mac_addresses: []  # e.g. ["\\xf4\\x1e\\x57\\x64\\x92\\xae", "\\xaa\\xbb\\xcc\\xdd\\xee\\xff"] — non-empty overrides mac_address; out-of-range TXs get UNREACHABLE placeholder lines (same slot count)
   measurements_per_batch: 5
   batch_interval: 1.0
 ```
@@ -56,6 +57,8 @@ rx_router:
 - `csi` - Only collect CSI data for Angle of Arrival (AoA)
 - `ftm` - Only collect FTM data for Time of Flight (ToF)
 - `both` - Collect both CSI and FTM data simultaneously
+
+**Multi-TX router topic JSON:** `measurements_by_mac` is a list of objects `{"mac_address": "...", "data": [...]}`; `data` is `[]` when that TX had no usable samples for the batch. A flattened `measurements` field (valid lines only, same MAC order) is kept for older consumers.
 
 ### 4. Build and Run
 

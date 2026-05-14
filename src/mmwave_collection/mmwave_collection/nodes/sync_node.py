@@ -309,22 +309,27 @@ class SyncNode(Node):
             data_type = batch_data.get('data_type', 'csi')
             batch_id = batch_data.get('batch_id', 0)
             measurements = batch_data.get('measurements', [])
+            measurements_by_mac = batch_data.get('measurements_by_mac')
             count = batch_data.get('count', 0)
         except json.JSONDecodeError:
             self.get_logger().error('Failed to parse router data as JSON')
             measurements, batch_id, count, data_type = [], 0, 1, 'csi'
+            measurements_by_mac = None
 
         data_dir = (self.session_dir / 'ftm_data'
                     if data_type == 'ftm' else self.session_dir / 'rx_router_data')
         data_file = data_dir / f'{ts_str}_batch{batch_id}.json'
+        payload = {
+            'data_type': data_type,
+            'batch_id': batch_id,
+            'timestamp': timestamp.isoformat(),
+            'measurements': measurements,
+            'count': count,
+        }
+        if measurements_by_mac is not None:
+            payload['measurements_by_mac'] = measurements_by_mac
         with open(data_file, 'w') as f:
-            json.dump({
-                'data_type': data_type,
-                'batch_id': batch_id,
-                'timestamp': timestamp.isoformat(),
-                'measurements': measurements,
-                'count': count,
-            }, f, indent=2)
+            json.dump(payload, f, indent=2)
 
         image_file = self.session_dir / 'images' / f'{ts_str}.jpg'
         if camera_msg:
@@ -366,32 +371,43 @@ class SyncNode(Node):
 
         def _parse(msg, default_type):
             if msg is None:
-                return 0, [], 0
+                return 0, [], 0, None
             try:
                 d = json.loads(msg.data)
-                return d.get('batch_id', 0), d.get('measurements', []), d.get('count', 0)
+                return (
+                    d.get('batch_id', 0),
+                    d.get('measurements', []),
+                    d.get('count', 0),
+                    d.get('measurements_by_mac'),
+                )
             except json.JSONDecodeError:
                 self.get_logger().error(f'Failed to parse {default_type} data')
-                return 0, [], 0
+                return 0, [], 0, None
 
-        csi_batch_id, csi_meas, csi_count = _parse(csi_msg, 'CSI')
-        ftm_batch_id, ftm_meas, ftm_count = _parse(ftm_msg, 'FTM')
+        csi_batch_id, csi_meas, csi_count, csi_by_mac = _parse(csi_msg, 'CSI')
+        ftm_batch_id, ftm_meas, ftm_count, ftm_by_mac = _parse(ftm_msg, 'FTM')
 
         csi_file = self.session_dir / 'rx_router_data' / f'{ts_str}_batch{csi_batch_id}.json'
+        csi_payload = {
+            'data_type': 'csi', 'batch_id': csi_batch_id,
+            'timestamp': timestamp.isoformat(),
+            'measurements': csi_meas, 'count': csi_count,
+        }
+        if csi_by_mac is not None:
+            csi_payload['measurements_by_mac'] = csi_by_mac
         with open(csi_file, 'w') as f:
-            json.dump({
-                'data_type': 'csi', 'batch_id': csi_batch_id,
-                'timestamp': timestamp.isoformat(),
-                'measurements': csi_meas, 'count': csi_count,
-            }, f, indent=2)
+            json.dump(csi_payload, f, indent=2)
 
         ftm_file = self.session_dir / 'ftm_data' / f'{ts_str}_batch{ftm_batch_id}.json'
+        ftm_payload = {
+            'data_type': 'ftm', 'batch_id': ftm_batch_id,
+            'timestamp': timestamp.isoformat(),
+            'measurements': ftm_meas, 'count': ftm_count,
+        }
+        if ftm_by_mac is not None:
+            ftm_payload['measurements_by_mac'] = ftm_by_mac
         with open(ftm_file, 'w') as f:
-            json.dump({
-                'data_type': 'ftm', 'batch_id': ftm_batch_id,
-                'timestamp': timestamp.isoformat(),
-                'measurements': ftm_meas, 'count': ftm_count,
-            }, f, indent=2)
+            json.dump(ftm_payload, f, indent=2)
 
         image_file = self.session_dir / 'images' / f'{ts_str}.jpg'
         if camera_msg:

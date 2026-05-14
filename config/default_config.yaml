@@ -16,7 +16,9 @@ rx_router:
   collection_mode: "csi"  # Options: 'csi', 'ftm', 'both'
   
   # CSI Collection parameters
-  mac_address: "\\xf4\\x1e\\x57\\x64\\x92\\xae"  # MAC address for vendor command
+  # Target TX MAC(s) for vendor recv (echo -e hex byte form, e.g. "\\xf4\\x1e\\x57\\x64\\x92\\xae").
+  mac_address: "\\xf4\\x1e\\x57\\x64\\x92\\xae"  # Used when mac_addresses is empty
+  mac_addresses: []  # Non-empty list: collect from each MAC (measurements_per_batch per MAC); overrides mac_address
   remote_file: "/tmp/csi_measurements.txt"  # Where measurements are stored on router
   remote_script: "/scripts/collect_csi.sh"      # Script location on router
   

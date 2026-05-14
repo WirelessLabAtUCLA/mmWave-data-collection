@@ -2,6 +2,7 @@ from typing import Any, Dict
 
 
 def prepare_collection_script(config: Dict[str, Any]) -> str:
+    """Single-MAC CSI script (one TX per invocation)."""
     script_content = f'''
         #!/bin/sh
         # CSI Batch Collection Script - {config['measurements_per_batch']} measurements
@@ -66,7 +67,7 @@ def prepare_collection_script(config: Dict[str, Any]) -> str:
 
 
 def prepare_ftm_collection_script(config: Dict[str, Any]) -> str:
-    """Prepare FTM (Fine Timing Measurement) collection script for ToF data"""
+    """Single-MAC FTM script (one TX per invocation)."""
     script_content = f'''
         #!/bin/sh
         # FTM Batch Collection Script - {config['measurements_per_batch']} measurements
