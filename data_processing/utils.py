@@ -3,7 +3,8 @@ import numpy as np
 from scipy.signal import find_peaks, savgol_filter
 from mikrotik_metadata import *
 
-def process_csi_data(H: np.ndarray, sample_rate: float = 0.4, plot: bool = False) -> np.ndarray:
+def process_csi_data(H: np.ndarray, sample_rate: float = 0.4, plot: bool = False,
+                     return_kept_indices: bool = False):
     """Process CSI data by removing outliers and smoothing.
 
     This method:
@@ -17,16 +18,23 @@ def process_csi_data(H: np.ndarray, sample_rate: float = 0.4, plot: bool = False
         H: Complex CSI data of shape (num_measurements, num_subcarriers)
         sample_rate: Sampling rate in Hz (default: 0.4 Hz)
         plot: If True, visualizes the peak detection process
+        return_kept_indices: If True, also return the indices (into the input H) of the
+            measurements that survived outlier removal. Default False (unchanged behavior).
 
     Returns:
-        Processed CSI data (may have fewer measurements due to outlier removal)
+        Processed CSI data (may have fewer measurements due to outlier removal), or
+        (processed_data, kept_indices) if return_kept_indices is True.
     """
     if H.size == 0 or len(H.shape) != 2:
+        if return_kept_indices:
+            return H, np.arange(len(H))
         return H
+
+    kept = np.arange(len(H))  # indices of original rows still present
 
     # Antennas to check for outliers 
     remove_peaks_ant_p1 = [2, 3, 4, 6, 7, 8, 11, 13, 21, 23, 25, 27]
-    remove_peaks_ant_p2 = valid_antennas
+    remove_peaks_ant_p2 = legacy_valid_antennas
 
     # First pass: Remove major outliers
     unwrapped_phase = np.unwrap(np.angle(H), axis=0)
@@ -58,6 +66,7 @@ def process_csi_data(H: np.ndarray, sample_rate: float = 0.4, plot: bool = False
 
     if len(indexes_to_remove) > 0:
         H = np.delete(H, indexes_to_remove, axis=0)
+        kept = np.delete(kept, indexes_to_remove)
 
     # Second pass: Remove remaining outliers based on magnitude changes
     if H.shape[0] > 2:
@@ -86,6 +95,7 @@ def process_csi_data(H: np.ndarray, sample_rate: float = 0.4, plot: bool = False
         
         if len(indexes_to_remove) > 0:
             H = np.delete(H, indexes_to_remove, axis=0)
+            kept = np.delete(kept, indexes_to_remove)
 
     # Third pass: Another magnitude change pass to catch remaining outliers
     if H.shape[0] > 2:
@@ -114,6 +124,7 @@ def process_csi_data(H: np.ndarray, sample_rate: float = 0.4, plot: bool = False
         
         if len(indexes_to_remove) > 0:
             H = np.delete(H, indexes_to_remove, axis=0)
+            kept = np.delete(kept, indexes_to_remove)
 
     for i in range(H.shape[1]):
         H[:, i] = np.clip(H[:, i], np.min(H[:, i]), 200)
@@ -131,6 +142,8 @@ def process_csi_data(H: np.ndarray, sample_rate: float = 0.4, plot: bool = False
         
         H = smoothed_channel
 
+    if return_kept_indices:
+        return H, kept
     return H
 
 
@@ -159,7 +172,7 @@ def process_csi_data_debug(H: np.ndarray, sample_rate: float = 0.4, plot: bool =
 
     # Antennas to check for outliers 
     remove_peaks_ant_p1 = [2, 3, 4, 6, 7, 8, 11, 13, 21, 23, 25, 27]
-    remove_peaks_ant_p2 = valid_antennas
+    remove_peaks_ant_p2 = legacy_valid_antennas
 
     # First pass: Remove major outliers
     unwrapped_phase = np.unwrap(np.angle(H), axis=0)

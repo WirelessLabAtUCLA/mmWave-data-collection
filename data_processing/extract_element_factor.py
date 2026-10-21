@@ -12,7 +12,7 @@ def extract_peak_theta(channel_data: np.ndarray) -> np.ndarray:
     spacing = 0.58 * session.frequency / 60.48
     antenna_array = AntennaArray()
     for ant in range(32):
-        if ant not in valid_antennas:
+        if ant not in legacy_valid_antennas:
             continue
         antenna_array.add_element(ordering_sets[ant, 0]*spacing - np.sign(ordering_sets[ant, 0])*spacing/2, 
              0, ordering_sets[ant, 1]*spacing - np.sign(ordering_sets[ant, 1])*spacing/2)
@@ -30,7 +30,7 @@ def extract_peak_theta(channel_data: np.ndarray) -> np.ndarray:
     return theta_peaks, peak_values
 
 
-session_dir = Path("/home/kanishka/Projects/mmWave-datasets/raw/2025-11-18/session_152325")
+session_dir = Path("/home/kanishka/mmWave-datasets/raw/2025-11-18/session_152325")
 elevation_angle = np.deg2rad(3)
 theta_range = np.deg2rad([-95, 95])
 
