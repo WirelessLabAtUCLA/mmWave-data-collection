@@ -59,6 +59,8 @@ HEIGHT_SESSION = RAW_ROOT / "2025-11-05" / "session_151928"
 # (S / A+ / A tier) antennas, mikrotik_metadata.valid_antennas.
 CSI_ANTENNAS = [int(a) for a in valid_antennas]
 N_CSI = len(CSI_ANTENNAS)
+# Antennas are 0-indexed everywhere in the code; figures label them 1-indexed (#1..#32).
+ANT_LABEL_OFFSET = 1
 # Outlier detection (utils.process_csi_data) is tuned to the 16-column matrix of the data-loading
 # pipeline (session_data.RouterBatch.from_file: antennas 0-9, 11, 13, 21, 23, 25, 27). To keep the
 # packet selection identical to that pipeline it is run on those 16 columns; the packets it keeps
@@ -299,7 +301,7 @@ def fig_phase_cleanup(ds: RotationDataset, out_dir: Path) -> Dict:
         ax.set_yticks([-180, 0, 180])
         ax.set_xlim(-h, h)
         ax.set_xticks(np.arange(-int(h), int(h) + 1, 30 if h <= 60 else 40))
-        ax.text(0.04, 0.95, f"Ant. {CSI_ANTENNAS[c]}", transform=ax.transAxes, ha="left", va="top",
+        ax.text(0.04, 0.95, f"Ant. {CSI_ANTENNAS[c] + ANT_LABEL_OFFSET}", transform=ax.transAxes, ha="left", va="top",
                 fontsize=6.5, fontweight="bold", color=DARK,
                 bbox=dict(fc="white", ec="none", pad=0.5))
     for k in range(N_CSI, nrows * ncols):
@@ -628,7 +630,7 @@ def fig_height_sensitivity(out_dir: Path, ref_col: int = 0, n_show: int = 2,
     sc = ax_map.scatter(xz[:, 0], xz[:, 1], c=sigma, cmap=cmap, vmin=0, vmax=vmax, s=235,
                         edgecolor=DARK, linewidth=0.6, zorder=3)
     for c in range(N_CSI):
-        ax_map.text(xz[c, 0], xz[c, 1], str(CSI_ANTENNAS[c]), ha="center", va="center",
+        ax_map.text(xz[c, 0], xz[c, 1], str(CSI_ANTENNAS[c] + ANT_LABEL_OFFSET), ha="center", va="center",
                     fontsize=6, color=DARK, zorder=4)
     ax_map.scatter(*xz[ref_col], s=400, facecolor="none", edgecolor=RED, linewidth=1.2, zorder=5,
                    linestyle="--")
@@ -660,7 +662,7 @@ def fig_height_sensitivity(out_dir: Path, ref_col: int = 0, n_show: int = 2,
         for j, c in enumerate(cols):
             col = shades[kind][j]
             ax_ph.plot(k, unw[:, c], "-o", color=col, lw=1.5, ms=2.6, mew=0, zorder=3)
-            labels.append((unw[-1, c], f"Ant. {CSI_ANTENNAS[c]}", col, sigma[c]))
+            labels.append((unw[-1, c], f"Ant. {CSI_ANTENNAS[c] + ANT_LABEL_OFFSET}", col, sigma[c]))
     # direct end-of-line labels (de-overlapped vertically)
     labels.sort(key=lambda t: t[0])
     min_gap = 0.065 * (ymax_plot - ymin_plot + 40)
@@ -674,7 +676,7 @@ def fig_height_sensitivity(out_dir: Path, ref_col: int = 0, n_show: int = 2,
     ax_ph.set_ylim(ymin_plot - 25, ymax_plot + 40)
     ax_ph.set_xticks(k[::2])
     ax_ph.set_xlabel("Measurement batch (chronological; TX height varying)")
-    ax_ph.set_ylabel(f"Phase change vs. ant. {CSI_ANTENNAS[ref_col]} (deg)")
+    ax_ph.set_ylabel(f"Phase change vs. ant. {CSI_ANTENNAS[ref_col] + ANT_LABEL_OFFSET} (deg)")
     arrow_axes(ax_ph)
     callout(ax_ph, rf"Stagnant: $\sigma_\phi$ = {sigma[stagnant].min():.0f}–{sigma[stagnant].max():.0f}$^\circ$",
             xy=(2.2, unw[2, stagnant[0]] + 4), xytext=(4.2, ymax_plot + 22), color=BLUE,

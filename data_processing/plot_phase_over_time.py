@@ -33,7 +33,7 @@ from scipy.ndimage import gaussian_filter
 from scipy.signal import savgol_filter
 
 from mikrotik_metadata import valid_antennas
-from paper_figures import (PIPELINE_ANTENNAS, OUT_ROOT, PHASE_LUT, ROTATION_DATASETS, _batch_info,
+from paper_figures import (ANT_LABEL_OFFSET, PIPELINE_ANTENNAS, OUT_ROOT, PHASE_LUT, ROTATION_DATASETS, _batch_info,
                            _parse_measurements)
 from paper_style import BLUE, DARK, DOUBLE_COL, MIDRED, RED, apply_style, save
 from utils import process_csi_data
@@ -130,7 +130,7 @@ def plot_phase_over_time(name: str, antennas: List[int], out_dir: Path, time_axi
         ax.set_ylim(-190, 190)
         ax.set_yticks([-180, 0, 180])
         ax.set_xlim(x_edges[0], x_edges[-1])
-        ax.text(0.04, 0.95, f"Ant. {ant}", transform=ax.transAxes,
+        ax.text(0.04, 0.95, f"Ant. {ant + ANT_LABEL_OFFSET}", transform=ax.transAxes,
                 ha="left", va="top", fontsize=6.5, fontweight="bold",
                 color=DARK, bbox=dict(fc="white", ec="none", pad=0.5))
     for k in range(len(antennas), nrows * ncols):

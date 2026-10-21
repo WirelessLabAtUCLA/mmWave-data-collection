@@ -12,8 +12,9 @@ Outlines
 --------
   red : reliable antennas = mikrotik_metadata.valid_antennas (19: S/A+/A tier)
 
-Labels are the 0-indexed physical antenna index used everywhere in the code
-(pass --one-indexed for MATLAB-style 1..32 labels).
+Labels are 1-indexed (#1..#32 = physical antenna index + 1). The code (valid_antennas,
+CSI_ANTENNAS, --extra, --reliable ...) always uses 0-indexed physical indices; pass
+--zero-indexed to label the cells with those instead.
 
 Usage
 -----
@@ -36,7 +37,7 @@ from matplotlib.colors import LinearSegmentedColormap, Normalize
 from matplotlib.patches import Patch, Rectangle
 
 from mikrotik_metadata import ordering_sets, valid_antennas
-from paper_figures import PIPELINE_ANTENNAS, OUT_ROOT, ROTATION_DATASETS, _batch_info, _parse_measurements
+from paper_figures import ANT_LABEL_OFFSET, PIPELINE_ANTENNAS, OUT_ROOT, ROTATION_DATASETS, _batch_info, _parse_measurements
 from paper_style import save
 from plot_phase_over_time import load_phase_tracks
 
@@ -134,7 +135,9 @@ def main() -> None:
                     help="antennas (0-31 indices) added to the reliable set")
     ap.add_argument("--reliable", choices=["pipeline", "valid"], default="valid",
                     help="valid: mikrotik_metadata.valid_antennas (19); pipeline: the 16 columns of session_data (PIPELINE_ANTENNAS)")
-    ap.add_argument("--one-indexed", action="store_true", help="label antennas 1..32 instead of 0..31")
+    ap.add_argument("--zero-indexed", dest="one_indexed", action="store_false",
+                    help="label antennas 0..31 (code indexing) instead of 1..32")
+    ap.set_defaults(one_indexed=bool(ANT_LABEL_OFFSET))
     ap.add_argument("--out", type=Path, default=OUT_ROOT)
     args = ap.parse_args()
 

@@ -31,7 +31,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from mikrotik_metadata import valid_antennas
-from paper_figures import OUT_ROOT, ROTATION_DATASETS
+from paper_figures import ANT_LABEL_OFFSET, OUT_ROOT, ROTATION_DATASETS
 from paper_style import save
 from plot_phase_over_time import load_phase_tracks
 
@@ -57,7 +57,7 @@ def plot_sorted_changes(name: str, level: str, antennas: list, out_dir: Path) ->
     cmap = plt.get_cmap("tab10")
     for k, a in enumerate(antennas):
         ax.plot(np.arange(1, len(d) + 1), d[:, k], lw=0.9, color=cmap(k % 10),
-                ls=["-", "--", "-.", ":"][k // 10], label=f"Ant. {a}")
+                ls=["-", "--", "-.", ":"][k // 10], label=f"Ant. {a + ANT_LABEL_OFFSET}")
     ax.set_ylim(-4, 4)
     ax.set_xlim(0, len(d))
     ax.set_xlabel("Sorted Sample Index")
